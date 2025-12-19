@@ -13,7 +13,7 @@ public final class JsonUtils {
     @Getter
     private static final JsonMapper jsonMapper = initializeJsonMapper();
 
-    public static JsonMapper initializeJsonMapper() {
+    private static JsonMapper initializeJsonMapper() {
         JsonMapper jsonMapper = new JsonMapper();
         jsonMapper.enable(SerializationFeature.INDENT_OUTPUT);
         jsonMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);

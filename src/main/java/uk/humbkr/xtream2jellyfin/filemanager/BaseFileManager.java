@@ -9,7 +9,7 @@ import uk.humbkr.xtream2jellyfin.common.JsonUtils;
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public class BaseFileManager {
 
-    protected final ObjectMapper objectMapper = JsonUtils.initializeJsonMapper();
+    protected final ObjectMapper objectMapper = JsonUtils.getJsonMapper();
 
     @NonNull
     protected final String rootDir;

@@ -90,7 +90,7 @@ public abstract class BaseStreamsHandler {
     public BaseStreamsHandler(XtreamProviderConfig providerConfig, FileManager fileManager,
                               GlobalSettings globalSettings, Logger log) {
         this.log = log;
-        this.objectMapper = JsonUtils.initializeJsonMapper();
+        this.objectMapper = JsonUtils.getJsonMapper();
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
                 .build();
@@ -380,7 +380,7 @@ public abstract class BaseStreamsHandler {
         String path = getCachePath(endpoint, action, contextId);
 
         if (useCache) {
-            result = FileManagerUtils.get(path, null);
+            result = FileManagerUtils.readFileContent(path);
         }
 
         if (result == null) {

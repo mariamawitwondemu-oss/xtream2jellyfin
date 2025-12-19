@@ -22,9 +22,9 @@ public class CachedFileManager extends BaseFileManager implements FileManager {
 
     private Map<String, Map<String, String>> filesDb;
 
-    // Stale file tracking
     private Set<String> trackedFiles;
 
+    // Stale file tracking
     private Set<String> staleFiles;
 
     public CachedFileManager(String rootDir, @NonNull String cacheDir) {
@@ -38,7 +38,7 @@ public class CachedFileManager extends BaseFileManager implements FileManager {
     @Override
     public void initialize() {
         // Load existing database
-        Object fileDb = FileManagerUtils.get(filesDbPath, null);
+        Object fileDb = FileManagerUtils.readFileContent(filesDbPath);
         if (fileDb != null) {
             try {
                 @SuppressWarnings("unchecked")
