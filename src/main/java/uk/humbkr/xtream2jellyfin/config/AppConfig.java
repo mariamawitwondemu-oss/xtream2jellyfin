@@ -10,7 +10,7 @@ import java.util.Map;
 public class AppConfig {
 
     @JsonProperty("app")
-    private GlobalSettings globalSettings = new GlobalSettings();
+    private AppSettings appSettings = new AppSettings();
 
     private Map<String, XtreamProviderConfig> providers = new HashMap<>();
 

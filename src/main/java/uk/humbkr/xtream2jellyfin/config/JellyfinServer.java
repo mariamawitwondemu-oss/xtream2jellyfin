@@ -3,9 +3,7 @@ package uk.humbkr.xtream2jellyfin.config;
 import lombok.Data;
 
 @Data
-public class JellyfinConfig {
-
-    private boolean enabled;
+public class JellyfinServer {
 
     private String protocol;
 
@@ -14,4 +12,5 @@ public class JellyfinConfig {
     private int port;
 
     private String token;
+
 }

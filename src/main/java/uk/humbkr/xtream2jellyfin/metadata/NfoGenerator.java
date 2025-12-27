@@ -7,6 +7,9 @@ import uk.humbkr.xtream2jellyfin.common.XmlUtils;
 import uk.humbkr.xtream2jellyfin.metadata.nfo.EpisodeNfo;
 import uk.humbkr.xtream2jellyfin.metadata.nfo.MovieNfo;
 import uk.humbkr.xtream2jellyfin.metadata.nfo.TvShowNfo;
+import uk.humbkr.xtream2jellyfin.xtream.model.SerieEpisode;
+import uk.humbkr.xtream2jellyfin.xtream.model.SerieInfo;
+import uk.humbkr.xtream2jellyfin.xtream.model.SerieItem;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,6 +37,23 @@ public class NfoGenerator {
     }
 
     /**
+     * Generate NFO XML content for a TV show
+     *
+     * @param serieItem The series item metadata from Xtream
+     * @param info      The series info metadata from Xtream
+     * @return NFO XML content as String, or null if generation fails
+     */
+    public static String generateTvShowNfo(SerieItem serieItem, SerieInfo info) {
+        try {
+            TvShowNfo nfo = buildTvShowNfo(serieItem, info);
+            return XmlUtils.getXmlMapper().writeValueAsString(nfo);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to generate TV show NFO", e);
+            return null;
+        }
+    }
+
+    /**
      * Generate NFO XML content for an episode
      *
      * @param episodeData The episode metadata from Xtream
@@ -42,6 +62,22 @@ public class NfoGenerator {
     public static String generateEpisodeNfo(Map<String, Object> episodeData) {
         try {
             EpisodeNfo nfo = buildEpisodeNfo(episodeData);
+            return XmlUtils.getXmlMapper().writeValueAsString(nfo);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to generate episode NFO", e);
+            return null;
+        }
+    }
+
+    /**
+     * Generate NFO XML content for an episode
+     *
+     * @param episode The episode metadata from Xtream
+     * @return NFO XML content as String, or null if generation fails
+     */
+    public static String generateEpisodeNfo(SerieEpisode episode) {
+        try {
+            EpisodeNfo nfo = buildEpisodeNfo(episode);
             return XmlUtils.getXmlMapper().writeValueAsString(nfo);
         } catch (JsonProcessingException e) {
             log.error("Failed to generate episode NFO", e);
@@ -163,6 +199,98 @@ public class NfoGenerator {
         return builder.build();
     }
 
+    private static TvShowNfo buildTvShowNfo(SerieItem serieItem, SerieInfo info) {
+        TvShowNfo.TvShowNfoBuilder builder = TvShowNfo.builder();
+
+        // Title
+        String title = serieItem.getName();
+        if (StringUtils.isNotBlank(title)) {
+            builder.title(cleanTitle(title));
+        }
+
+        // Plot
+        String plot = info.getPlot();
+        if (StringUtils.isNotBlank(plot)) {
+            builder.plot(plot);
+        }
+
+        // Premiered
+        String premiered = serieItem.getReleaseDate();
+        if (premiered == null && info != null) {
+            premiered = info.getReleaseDate();
+        }
+        if (StringUtils.isNotBlank(premiered)) {
+            builder.premiered(premiered);
+        }
+
+        // Rating
+        String rating = info.getRating();
+        if (StringUtils.isNotBlank(rating)) {
+            try {
+                builder.userrating(Double.parseDouble(rating));
+            } catch (NumberFormatException e) {
+                log.debug("Failed to parse rating: {}", rating);
+            }
+        }
+
+        // Unique IDs - Note: Xtream API doesn't consistently provide TMDB/TVDB IDs in series list
+        // They may be available in the detailed info, but the structure varies
+        List<TvShowNfo.UniqueId> uniqueIds = new ArrayList<>();
+        // For now, we'll skip unique IDs as they're not reliably available in the current model
+        if (!uniqueIds.isEmpty()) {
+            builder.uniqueids(uniqueIds);
+        }
+
+        // Genres
+        String genre = info.getGenre();
+        if (StringUtils.isNotBlank(genre)) {
+            List<String> genres = Arrays.stream(genre.split("/"))
+                    .map(String::trim)
+                    .filter(StringUtils::isNotBlank)
+                    .collect(Collectors.toList());
+            if (!genres.isEmpty()) {
+                builder.genres(genres);
+            }
+        }
+
+        // Actors
+        String cast = info.getCast();
+        if (StringUtils.isNotBlank(cast)) {
+            List<TvShowNfo.Actor> actors = Arrays.stream(cast.split(","))
+                    .map(String::trim)
+                    .filter(StringUtils::isNotBlank)
+                    .map(name -> TvShowNfo.Actor.builder().name(name).build())
+                    .collect(Collectors.toList());
+            if (!actors.isEmpty()) {
+                builder.actors(actors);
+            }
+        }
+
+        // Directors
+        String director = info.getDirector();
+        if (StringUtils.isNotBlank(director)) {
+            List<String> directors = Arrays.stream(director.split(","))
+                    .map(String::trim)
+                    .filter(StringUtils::isNotBlank)
+                    .collect(Collectors.toList());
+            if (!directors.isEmpty()) {
+                builder.directors(directors);
+            }
+        }
+
+        // Runtime
+        String episodeRunTime = info.getEpisodeRunTime();
+        if (StringUtils.isNotBlank(episodeRunTime)) {
+            try {
+                builder.runtime(Integer.parseInt(episodeRunTime));
+            } catch (NumberFormatException e) {
+                log.debug("Failed to parse runtime: {}", episodeRunTime);
+            }
+        }
+
+        return builder.build();
+    }
+
     private static EpisodeNfo buildEpisodeNfo(Map<String, Object> episodeData) {
         EpisodeNfo.EpisodeNfoBuilder builder = EpisodeNfo.builder();
 
@@ -222,6 +350,53 @@ public class NfoGenerator {
             String crew = getString(info, "crew");
             if (StringUtils.isNotBlank(crew)) {
                 builder.director(crew);
+            }
+        }
+
+        return builder.build();
+    }
+
+    private static EpisodeNfo buildEpisodeNfo(SerieEpisode episode) {
+        EpisodeNfo.EpisodeNfoBuilder builder = EpisodeNfo.builder();
+
+        // Title
+        String title = episode.getTitle();
+        if (StringUtils.isNotBlank(title)) {
+            builder.title(extractEpisodeTitle(title));
+        }
+
+        // Season
+        Integer season = episode.getSeason();
+        if (season != null) {
+            builder.season(season);
+        }
+
+        // Episode
+        Integer episodeNum = episode.getEpisodeNum();
+        if (episodeNum != null) {
+            builder.episode(episodeNum);
+        }
+
+        // Get info
+        if (episode.getInfo() != null) {
+            var info = episode.getInfo();
+
+            // Aired date
+            String airDate = info.getReleasedate();
+            if (StringUtils.isNotBlank(airDate)) {
+                builder.aired(airDate);
+            }
+
+            // Plot
+            String plot = info.getPlot();
+            if (StringUtils.isNotBlank(plot)) {
+                builder.plot(plot);
+            }
+
+            // Rating
+            Double rating = info.getRating();
+            if (rating != null) {
+                builder.userrating(rating);
             }
         }
 

@@ -5,12 +5,13 @@ import ch.qos.logback.classic.joran.JoranConfigurator;
 import ch.qos.logback.core.joran.spi.JoranException;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.LoggerFactory;
+import uk.humbkr.xtream2jellyfin.command.CommandExecutor;
 import uk.humbkr.xtream2jellyfin.common.Constants;
 import uk.humbkr.xtream2jellyfin.common.YamlUtils;
 import uk.humbkr.xtream2jellyfin.config.AppConfig;
-import uk.humbkr.xtream2jellyfin.config.GlobalSettings;
+import uk.humbkr.xtream2jellyfin.config.AppSettings;
 import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
-import uk.humbkr.xtream2jellyfin.streamhandler.XtreamProcessor;
+import uk.humbkr.xtream2jellyfin.xtream.XtreamProcessor;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,7 +23,16 @@ public class Xtream2JellyfinApp {
 
     public static void main(String[] args) {
         loadLogbackConfig();
-        new Xtream2JellyfinApp().run();
+
+        Xtream2JellyfinApp app = new Xtream2JellyfinApp();
+
+        if (args.length > 0) {
+            AppConfig appConfig = app.readConfig();
+            CommandExecutor commandExecutor = new CommandExecutor(appConfig);
+            commandExecutor.execute(args);
+        } else {
+            app.run();
+        }
     }
 
     private static void loadLogbackConfig() {
@@ -50,7 +60,7 @@ public class Xtream2JellyfinApp {
         for (XtreamProviderConfig providerConfig : appConfig.getProviders().values()) {
             String providerName = providerConfig.getName();
 
-            Thread thread = new Thread(() -> processProviderStreams(providerConfig, appConfig.getGlobalSettings()));
+            Thread thread = new Thread(() -> processProviderStreams(appConfig.getAppSettings(), providerConfig));
             thread.setName("provider-" + providerName);
             threads.add(thread);
             thread.start();
@@ -83,8 +93,10 @@ public class Xtream2JellyfinApp {
         return new AppConfig();
     }
 
-    private void processProviderStreams(XtreamProviderConfig config, GlobalSettings globalSettings) {
-        new XtreamProcessor(config, globalSettings).processStreams();
+    private void processProviderStreams(AppSettings appSettings, XtreamProviderConfig providerConfig) {
+        try (XtreamProcessor xtreamProcessor = new XtreamProcessor(appSettings, providerConfig)) {
+            xtreamProcessor.processStreams();
+        }
     }
 
 }

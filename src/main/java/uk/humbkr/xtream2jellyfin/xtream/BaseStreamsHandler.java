@@ -1,18 +1,18 @@
-package uk.humbkr.xtream2jellyfin.streamhandler;
+package uk.humbkr.xtream2jellyfin.xtream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.CollectionType;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
-import uk.humbkr.xtream2jellyfin.common.Constants;
 import uk.humbkr.xtream2jellyfin.common.JsonUtils;
 import uk.humbkr.xtream2jellyfin.common.RegexUtils;
-import uk.humbkr.xtream2jellyfin.config.GlobalSettings;
+import uk.humbkr.xtream2jellyfin.config.AppSettings;
 import uk.humbkr.xtream2jellyfin.config.MediaSettings;
 import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
 import uk.humbkr.xtream2jellyfin.filemanager.FileManager;
-import uk.humbkr.xtream2jellyfin.filemanager.FileManagerUtils;
 import uk.humbkr.xtream2jellyfin.nameformat.CategoryNameFormat;
 import uk.humbkr.xtream2jellyfin.nameformat.StreamNameFormat;
+import uk.humbkr.xtream2jellyfin.xtream.model.*;
 
 import java.io.IOException;
 import java.net.URI;
@@ -51,23 +51,15 @@ public abstract class BaseStreamsHandler {
 
     protected final boolean writeMetadataNfo;
 
-    protected final boolean useServerInfo;
-
-    protected final boolean enabled;
-
-    protected final String cacheDir;
-
     protected final String mediaDir;
 
-    protected final Map<String, XtreamAction> resolvers;
+    protected final Map<String, Action> resolvers;
 
-    protected final boolean useCache = Constants.USE_CACHE;
-
-    protected final StreamNameFormat movieNameFormat;
-
-    protected final StreamNameFormat seriesNameFormat;
+    protected final StreamNameFormat mediaNameFormat;
 
     protected final CategoryNameFormat categoryNameFormat;
+
+//    protected final Class<?> streamItemClass;
 
     private final Logger log;
 
@@ -88,7 +80,7 @@ public abstract class BaseStreamsHandler {
     protected long processingStartTime = 0;
 
     public BaseStreamsHandler(XtreamProviderConfig providerConfig, FileManager fileManager,
-                              GlobalSettings globalSettings, Logger log) {
+                              AppSettings appSettings, Logger log) {
         this.log = log;
         this.objectMapper = JsonUtils.getJsonMapper();
         this.httpClient = HttpClient.newBuilder()
@@ -97,53 +89,49 @@ public abstract class BaseStreamsHandler {
 
         this.fileManager = fileManager;
         this.providerName = Objects.requireNonNull(providerConfig.getName());
-        this.writeMetadataJson = globalSettings.isWriteMetadataJson();
-        this.writeMetadataNfo = globalSettings.isWriteMetadataNfo();
+        this.writeMetadataJson = appSettings.isWriteMetadataJson();
+        this.writeMetadataNfo = appSettings.isWriteMetadataNfo();
 
         this.username = providerConfig.getUsername();
         this.password = providerConfig.getPassword();
         this.providerUrl = providerConfig.getUrl();
         this.categoryNameCleanupPatterns = providerConfig.getCategoryNameCleanupPatterns();
 
-        this.cacheDir = Constants.CACHE_DIR + "/" + providerName;
-
-        String baseMediaDir = globalSettings.getMediaDir();
+        String baseMediaDir = appSettings.getMediaDir();
         this.mediaDir = baseMediaDir + "/" + providerName + "/" + getMediaType();
 
         MediaSettings mediaSettings = getMediaSettingsForType(providerConfig);
 
-        this.useServerInfo = mediaSettings.isUseServerInfo();
         this.nameCleanupPatterns = mediaSettings.getNameCleanupPatterns();
         this.includeCategoryIds = mediaSettings.getIncludeCategoryIds();
         this.excludeCategoryIds = mediaSettings.getExcludeCategoryIds();
         this.categoryFolder = mediaSettings.isCategoryFolder();
-        this.enabled = mediaSettings.isEnabled();
 
         this.resolvers = Constants.MEDIA_RESOLVERS.get(getMediaType());
         this.data = new HashMap<>();
         this.categories = new HashMap<>();
 
-        // Initialize name formatters with default templates
-        String movieTemplate = "${name} (${year}) [${externalProviderId}-${externalId}]";
-        String seriesTemplate = "${name} (${year}) [${externalProviderId}-${externalId}]";
-
-        this.movieNameFormat = new StreamNameFormat(movieTemplate, mediaSettings.getNameCleanupPatterns());
-        this.seriesNameFormat = new StreamNameFormat(seriesTemplate, mediaSettings.getNameCleanupPatterns());
+        this.mediaNameFormat = new StreamNameFormat(mediaSettings.getNameFormat(), mediaSettings.getNameCleanupPatterns());
         this.categoryNameFormat = new CategoryNameFormat(this.categoryNameCleanupPatterns);
     }
 
     private MediaSettings getMediaSettingsForType(XtreamProviderConfig config) {
-        MediaType type = getMediaType();
-        return switch (type) {
-            case LIVE -> config.getLive();
-            case MOVIE -> config.getMovies();
-            case SERIES -> config.getSeries();
+        return switch (this.getMediaType()) {
+            case LIVE -> config.getLiveSettings();
+            case MOVIE -> {
+                config.getMoviesSettings().setNameFormat("${name} (${year}) [${externalProviderId}-${externalId}]");
+                yield config.getMoviesSettings();
+            }
+            case SERIES -> {
+                config.getSeriesSettings().setNameFormat("${name} (${year}) [${externalProviderId}-${externalId}]");
+                yield config.getSeriesSettings();
+            }
         };
     }
 
     public abstract MediaType getMediaType();
 
-    protected void processItem(Map<String, Object> stream) throws Exception {
+    protected void processItem(Object item) throws Exception {
         // To be overridden by subclasses
     }
 
@@ -153,13 +141,13 @@ public abstract class BaseStreamsHandler {
     }
 
     @SuppressWarnings("unchecked")
-    protected List<Map<String, Object>> getCategories() {
-        return (List<Map<String, Object>>) data.get(Constants.MEDIA_RESOLVER_CATEGORIES);
+    protected List<Category> getCategories() {
+        return (List<Category>) data.get(Constants.MEDIA_RESOLVER_CATEGORIES);
     }
 
-    public void setProviderUrl(Map<String, Object> serverInfo) {
-        String url = (String) serverInfo.get("url");
-        String serverProtocol = (String) serverInfo.get("server_protocol");
+    public void setProviderUrl(ServerInfo serverInfo) {
+        String url = serverInfo.getUrl();
+        String serverProtocol = serverInfo.getServerProtocol();
         this.providerUrl = serverProtocol + "://" + url;
     }
 
@@ -188,11 +176,17 @@ public abstract class BaseStreamsHandler {
         }
     }
 
+//    protected Collection<Object> getAllStreams() {
+//        return List.of();
+//    }
+//
+//    protected abstract <T> Class<T> getStreamItemClass();
+
     protected void processStreams() {
 
         // Get reference to streams list before removing from data map
         @SuppressWarnings("unchecked")
-        List<Map<String, Object>> allStreams = (List<Map<String, Object>>) data.remove(Constants.MEDIA_RESOLVER_STREAMS);
+        List<StreamItem> allStreams = (List<StreamItem>) data.remove(Constants.MEDIA_RESOLVER_STREAMS);
 
         // Count total streams
         int totalStreamsCount = allStreams.size();
@@ -202,16 +196,16 @@ public abstract class BaseStreamsHandler {
         resetCounters(totalStreamsCount);
 
         // Process streams one at a time, allowing GC to collect each stream after processing
-        Iterator<Map<String, Object>> streamsIterator = allStreams.iterator();
+        Iterator<StreamItem> streamsIterator = allStreams.iterator();
         while (streamsIterator.hasNext()) {
-            Map<String, Object> stream = streamsIterator.next();
-            Object streamName = stream.get("name");
-            if (!canProcess(stream)) {
+            StreamItem streamItem = streamsIterator.next();
+            String streamName = streamItem.getName();
+            if (!canProcess(streamItem)) {
                 logDebug("Skipping stream: " + streamName);
                 streamsSkipped++;
             } else {
                 try {
-                    processItem(stream);
+                    processItem(streamItem);
                 } catch (Exception ex) {
                     logError("Failed to process " + getMediaType() + " stream, ID: " + streamName + ", Error: " + ex.getMessage(), ex);
                 }
@@ -224,9 +218,9 @@ public abstract class BaseStreamsHandler {
         allStreams.clear();
     }
 
-    protected boolean canProcess(Map<String, Object> streamInfo) {
-        String streamName = (String) streamInfo.get("name");
-        String categoryId = String.valueOf(streamInfo.get("category_id"));
+    protected boolean canProcess(StreamItem streamItem) {
+        String streamName = streamItem.getName();
+        String categoryId = streamItem.getCategoryId();
 
         if (streamName == null) {
             return false;
@@ -251,9 +245,9 @@ public abstract class BaseStreamsHandler {
             List<Object[]> allDataPoints = getDataPoints();
 
             for (Object[] dataPoints : allDataPoints) {
-                XtreamEndpoint endpoint = (XtreamEndpoint) dataPoints[0];
+                Endpoint endpoint = (Endpoint) dataPoints[0];
                 String dataPoint = (String) dataPoints[1];
-                XtreamAction action = (XtreamAction) dataPoints[2];
+                Action action = (Action) dataPoints[2];
 
                 loadDataPoint(endpoint, dataPoint, action);
             }
@@ -271,23 +265,23 @@ public abstract class BaseStreamsHandler {
         List<Object[]> args = new ArrayList<>();
 
         for (String resolverAction : Constants.LOAD_DATA_ACTIONS) {
-            XtreamAction action = resolvers.get(resolverAction);
+            Action action = resolvers.get(resolverAction);
             if (action != null) {
-                args.add(new Object[]{XtreamEndpoint.PLAYER, resolverAction, action});
+                args.add(new Object[]{Endpoint.PLAYER, resolverAction, action});
             }
         }
 
         return args;
     }
 
-    protected void loadDataPoint(XtreamEndpoint endpoint, String dataPoint, XtreamAction action) {
+    protected void loadDataPoint(Endpoint endpoint, String dataPoint, Action action) {
         try {
             logDebug("Load endpoint data, Endpoint: " + endpoint);
 
             Object dataResult = getData(endpoint, action, null);
 
             if (dataResult != null) {
-                if (endpoint == XtreamEndpoint.PLAYER) {
+                if (endpoint == Endpoint.PLAYER) {
                     data.put(dataPoint, dataResult);
                 }
 
@@ -301,7 +295,7 @@ public abstract class BaseStreamsHandler {
         }
     }
 
-    protected void extraDataLoading(XtreamEndpoint endpoint, Object data) {
+    protected void extraDataLoading(Endpoint endpoint, Object data) {
         // To be overridden by subclasses
     }
 
@@ -310,9 +304,9 @@ public abstract class BaseStreamsHandler {
             long startTime = System.currentTimeMillis();
             logInfo("Loading categories");
 
-            for (Map<String, Object> item : getCategories()) {
-                String categoryId = String.valueOf(item.get("category_id"));
-                String categoryName = (String) item.get("category_name");
+            for (Category category : getCategories()) {
+                String categoryId = category.getCategoryId();
+                String categoryName = category.getCategoryName();
 
                 categoryName = cleanCategoryName(categoryName);
 
@@ -354,12 +348,12 @@ public abstract class BaseStreamsHandler {
         return text;
     }
 
-    protected String buildUrl(XtreamEndpoint endpoint, XtreamAction action, String contextId) {
+    protected String buildUrl(Endpoint endpoint, Action action, String contextId) {
         String credentials = "username" + "=" + username + "&" +
                 "password" + "=" + password;
         String url = providerUrl + "/" + endpoint + ".php?" + credentials;
 
-        if (action != null && endpoint == XtreamEndpoint.PLAYER) {
+        if (action != null && endpoint == Endpoint.PLAYER) {
             url += "&action=" + action;
 
             if (contextId != null) {
@@ -375,81 +369,117 @@ public abstract class BaseStreamsHandler {
         return url;
     }
 
-    public Object getData(XtreamEndpoint endpoint, XtreamAction action, String contextId) {
+    public Object getData(Endpoint endpoint, Action action, String contextId) {
         Object result = null;
-        String path = getCachePath(endpoint, action, contextId);
 
-        if (useCache) {
-            result = FileManagerUtils.readFileContent(path);
-        }
+        String url = buildUrl(endpoint, action, contextId);
 
-        if (result == null) {
-            String url = buildUrl(endpoint, action, contextId);
+        log.debug("Fetching data from URL: {}", url);
 
-            log.debug("Fetching data from URL: {}", url);
+        for (int attempt = 0; attempt < 3; attempt++) {
+            try {
+                HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .timeout(Duration.ofSeconds(30))
+                        .GET();
 
-            for (int attempt = 0; attempt < 3; attempt++) {
-                try {
-                    HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                            .uri(URI.create(url))
-                            .timeout(Duration.ofSeconds(30))
-                            .GET();
-
-                    for (Map.Entry<String, String> header : Constants.HEADERS.entrySet()) {
-                        requestBuilder.header(header.getKey(), header.getValue());
-                    }
-
-                    HttpResponse<String> response = httpClient.send(
-                            requestBuilder.build(),
-                            HttpResponse.BodyHandlers.ofString()
-                    );
-
-                    if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                        String responseBody = response.body();
-
-                        if (endpoint.isJson()) {
-                            result = objectMapper.readValue(responseBody, Object.class);
-                        } else {
-                            result = responseBody;
-                        }
-                        break;
-                    }
-
-                    Thread.sleep(1000);
-                } catch (IOException | InterruptedException e) {
-                    if (e instanceof InterruptedException) {
-                        Thread.currentThread().interrupt();
-                    }
-                    logError("Attempt " + (attempt + 1) + " failed: " + e.getMessage(), e);
+                for (Map.Entry<String, String> header : Constants.HEADERS.entrySet()) {
+                    requestBuilder.header(header.getKey(), header.getValue());
                 }
-            }
 
-            if (result != null) {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
+                HttpResponse<String> response = httpClient.send(
+                        requestBuilder.build(),
+                        HttpResponse.BodyHandlers.ofString()
+                );
+
+                if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                    String responseBody = response.body();
+
+                    if (endpoint.isJson()) {
+                        if (action.getCollectionType() != null) {
+                            CollectionType collectionType = objectMapper.getTypeFactory().constructCollectionType(action.getCollectionType(), action.getValueType());
+                            result = objectMapper.readValue(responseBody, collectionType);
+                        } else {
+                            result = objectMapper.readValue(responseBody, action.getValueType());
+                        }
+                    } else {
+                        result = action.getValueType().cast(responseBody);
+                    }
+                    break;
+                }
+
+                Thread.sleep(1000);
+            } catch (IOException | InterruptedException e) {
+                if (e instanceof InterruptedException) {
                     Thread.currentThread().interrupt();
                 }
+                logError("Attempt " + (attempt + 1) + " failed: " + e.getMessage(), e);
             }
         }
 
-        if (useCache && result != null) {
-            String date = Instant.now().toString();
-            fileManager.save(path, result, date);
+        if (result != null) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
 
         return result;
     }
 
-    protected String getCachePath(XtreamEndpoint endpoint, XtreamAction action, String contextId) {
-        List<String> parts = new ArrayList<>();
-        parts.add(endpoint.toString());
-        if (action != null) parts.add(action.toString());
-        if (contextId != null) parts.add(contextId);
-        parts.add(endpoint.getExt());
+    protected <T> T getData(Endpoint endpoint, Action action, String contextId, Class<T> clazz) {
+        T result = null;
 
-        String fileName = String.join(".", parts);
-        return cacheDir + "/" + fileName;
+        String url = buildUrl(endpoint, action, contextId);
+
+        logDebug("Fetching data from URL: " + url);
+
+        for (int attempt = 0; attempt < 3; attempt++) {
+            try {
+                HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .timeout(Duration.ofSeconds(30))
+                        .GET();
+
+                for (Map.Entry<String, String> header : Constants.HEADERS.entrySet()) {
+                    requestBuilder.header(header.getKey(), header.getValue());
+                }
+
+                HttpResponse<String> response = httpClient.send(
+                        requestBuilder.build(),
+                        HttpResponse.BodyHandlers.ofString()
+                );
+
+                if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                    String responseBody = response.body();
+
+                    if (endpoint.isJson()) {
+                        result = objectMapper.readValue(responseBody, clazz);
+                    } else {
+                        result = clazz.cast(responseBody);
+                    }
+                    break;
+                }
+
+                Thread.sleep(1000);
+            } catch (IOException | InterruptedException e) {
+                if (e instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
+                logError("Attempt " + (attempt + 1) + " failed: " + e.getMessage(), e);
+            }
+        }
+
+        if (result != null) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        return result;
     }
 
     protected String buildStreamUrl(String streamId, String ext) {

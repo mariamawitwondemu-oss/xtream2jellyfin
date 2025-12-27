@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 @Data
-public class GlobalSettings {
+public class AppSettings {
 
     @JsonProperty("run_once")
     private boolean runOnce = false;

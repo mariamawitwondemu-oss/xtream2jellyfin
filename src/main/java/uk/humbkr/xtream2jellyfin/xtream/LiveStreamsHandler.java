@@ -1,9 +1,11 @@
-package uk.humbkr.xtream2jellyfin.streamhandler;
+package uk.humbkr.xtream2jellyfin.xtream;
 
 import lombok.extern.slf4j.Slf4j;
-import uk.humbkr.xtream2jellyfin.config.GlobalSettings;
+import uk.humbkr.xtream2jellyfin.config.AppSettings;
 import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
 import uk.humbkr.xtream2jellyfin.filemanager.FileManager;
+import uk.humbkr.xtream2jellyfin.xtream.model.Endpoint;
+import uk.humbkr.xtream2jellyfin.xtream.model.MediaType;
 
 import java.time.Instant;
 import java.util.*;
@@ -13,8 +15,8 @@ public class LiveStreamsHandler extends BaseStreamsHandler {
 
     private String epgData;
 
-    public LiveStreamsHandler(XtreamProviderConfig providerConfig, FileManager fileManager, GlobalSettings globalSettings) {
-        super(providerConfig, fileManager, globalSettings, log);
+    public LiveStreamsHandler(XtreamProviderConfig providerConfig, FileManager fileManager, AppSettings appSettings) {
+        super(providerConfig, fileManager, appSettings, log);
     }
 
     @Override
@@ -32,7 +34,8 @@ public class LiveStreamsHandler extends BaseStreamsHandler {
             liveStreamsData.add("#EXTM3U");
 
             for (Map<String, Object> liveStream : getStreams()) {
-                boolean canProcess = canProcess(liveStream);
+//                boolean canProcess = canProcess(liveStream); FIXME
+                boolean canProcess = false;
 
                 if (canProcess) {
                     List<String> lines = processLiveStream(liveStream);
@@ -108,13 +111,13 @@ public class LiveStreamsHandler extends BaseStreamsHandler {
     @Override
     protected List<Object[]> getDataPoints() {
         List<Object[]> args = super.getDataPoints();
-        args.add(new Object[]{XtreamEndpoint.EPG, XtreamEndpoint.EPG.toString(), null});
+        args.add(new Object[]{Endpoint.EPG, Endpoint.EPG.toString(), null});
         return args;
     }
 
     @Override
-    protected void extraDataLoading(XtreamEndpoint endpoint, Object data) {
-        if (endpoint == XtreamEndpoint.EPG) {
+    protected void extraDataLoading(Endpoint endpoint, Object data) {
+        if (endpoint == Endpoint.EPG) {
             this.epgData = (String) data;
         }
     }

@@ -1,4 +1,4 @@
-package uk.humbkr.xtream2jellyfin.streamhandler.nameformat;
+package uk.humbkr.xtream2jellyfin.xtream.nameformat;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -36,7 +36,7 @@ public class CachedFileManager extends BaseFileManager implements FileManager {
     }
 
     @Override
-    public void initialize() {
+    public void onProcessStart() {
         // Load existing database
         Object fileDb = FileManagerUtils.readFileContent(filesDbPath);
         if (fileDb != null) {
@@ -60,7 +60,7 @@ public class CachedFileManager extends BaseFileManager implements FileManager {
     }
 
     @Override
-    public void complete() {
+    public void onProcessEnd() {
         // Clean up stale files first
         cleanupStaleFiles();
 

@@ -15,13 +15,13 @@ public class SimpleFileManager extends BaseFileManager implements FileManager {
     }
 
     @Override
-    public void initialize() {
+    public void onProcessStart() {
         this.deleteDirectory(rootDir);
         log.info("Cleaned up directory: {}", rootDir);
     }
 
     @Override
-    public void complete() {
+    public void onProcessEnd() {
         // No-op: SimpleFileManager doesn't maintain a database
     }
 

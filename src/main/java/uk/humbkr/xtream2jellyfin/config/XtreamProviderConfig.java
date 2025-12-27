@@ -20,7 +20,7 @@ public class XtreamProviderConfig {
 
     private String password;
 
-    private int interval = Constants.DEFAULT_SCAN_INTERVAL;
+    private int scanInterval = Constants.DEFAULT_SCAN_INTERVAL;
 
     @JsonProperty("category_name_cleanup_patterns")
     private Map<String, String> categoryNameCleanupPatterns = new HashMap<>();
@@ -28,19 +28,19 @@ public class XtreamProviderConfig {
     @JsonProperty("write_metadata_json")
     private boolean writeMetadataJson = false;
 
-    private JellyfinConfig libraryRefresh;
+    private JellyfinServer libraryRefresh;
 
-    private MediaSettings live;
+    private MediaSettings liveSettings;
 
-    private MediaSettings movies;
+    private MediaSettings moviesSettings;
 
-    private MediaSettings series;
+    private MediaSettings seriesSettings;
 
     @JsonProperty("settings")
     public void setMediaSettings(Map<String, MediaSettings> settings) {
-        this.live = settings.get("live");
-        this.movies = settings.get("movies");
-        this.series = settings.get("series");
+        this.liveSettings = settings.get("live");
+        this.moviesSettings = settings.get("movies");
+        this.seriesSettings = settings.get("series");
     }
 
 }

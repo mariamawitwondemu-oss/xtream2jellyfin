@@ -1,24 +1,18 @@
-package uk.humbkr.xtream2jellyfin.streamhandler;
+package uk.humbkr.xtream2jellyfin.xtream.model;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 @Getter
-public enum XtreamEndpoint {
+@RequiredArgsConstructor
+public enum Endpoint {
     PLAYER("player_api"),
     EPG("xmltv");
 
     private final String value;
 
-    XtreamEndpoint(String value) {
-        this.value = value;
-    }
-
     public boolean isJson() {
         return this == PLAYER;
-    }
-
-    public String getExt() {
-        return isJson() ? "json" : "xml";
     }
 
     @Override

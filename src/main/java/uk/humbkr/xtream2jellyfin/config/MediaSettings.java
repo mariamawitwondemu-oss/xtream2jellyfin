@@ -1,5 +1,6 @@
 package uk.humbkr.xtream2jellyfin.config;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
@@ -16,9 +17,6 @@ public class MediaSettings {
     @JsonProperty("category_folder")
     private boolean categoryFolder = true;
 
-    @JsonProperty("use_server_info")
-    private boolean useServerInfo = false;
-
     @JsonProperty("name_cleanup_patterns")
     private Map<String, String> nameCleanupPatterns = new HashMap<>();
 
@@ -27,4 +25,8 @@ public class MediaSettings {
 
     @JsonProperty("exclude_category_ids")
     private List<String> excludeCategoryIds = new ArrayList<>();
+
+    @JsonIgnore
+    private String nameFormat;
+
 }

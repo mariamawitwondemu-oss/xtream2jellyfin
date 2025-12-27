@@ -1,12 +1,13 @@
-package uk.humbkr.xtream2jellyfin.streamhandler;
+package uk.humbkr.xtream2jellyfin.xtream;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import uk.humbkr.xtream2jellyfin.config.GlobalSettings;
+import uk.humbkr.xtream2jellyfin.config.AppSettings;
 import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
 import uk.humbkr.xtream2jellyfin.filemanager.FileManager;
 import uk.humbkr.xtream2jellyfin.metadata.NfoGenerator;
 import uk.humbkr.xtream2jellyfin.nameformat.StreamNameFormatContext;
+import uk.humbkr.xtream2jellyfin.xtream.model.*;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -16,8 +17,8 @@ import java.util.Map;
 @Slf4j
 public class SeriesStreamsHandler extends BaseStreamsHandler {
 
-    public SeriesStreamsHandler(XtreamProviderConfig providerConfig, FileManager fileManager, GlobalSettings globalSettings) {
-        super(providerConfig, fileManager, globalSettings, log);
+    public SeriesStreamsHandler(XtreamProviderConfig providerConfig, FileManager fileManager, AppSettings appSettings) {
+        super(providerConfig, fileManager, appSettings, log);
     }
 
     @Override
@@ -26,19 +27,19 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
     }
 
     @Override
-    protected void processItem(Map<String, Object> stream) throws Exception {
-        processSeriesStream(stream);
+    protected void processItem(Object item) {
+        processSeriesStream((SerieItem) item);
     }
 
-    private String getStreamInfoPath(Map<String, Object> stream) {
-        String seriesName = (String) stream.get("name");
-        String categoryId = String.valueOf(stream.get("category_id"));
+    private String getStreamInfoPath(SerieItem serieItem, SerieInfo info) {
+        String seriesName = serieItem.getName();
+        String categoryId = String.valueOf(serieItem.getCategoryId());
 
         String seriesCategory = categories.get(categoryId);
 
         // Format series name with Jellyfin-compatible naming
-        String tmdbId = extractTmdbId(stream);
-        String tvdbId = extractTvdbId(stream);
+        String tmdbId = (info != null && info.getCategoryId() != null) ? info.getCategoryId() : null;
+        String tvdbId = null;
 
         // Prefer TVDB ID for series, fallback to TMDB
         String externalProviderId = null;
@@ -52,12 +53,12 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
         }
 
         StreamNameFormatContext context = StreamNameFormatContext.builder()
-                .year(extractYear(stream))
+                .year(serieItem.getReleaseDate() != null ? extractYearFromDate(serieItem.getReleaseDate()) : null)
                 .externalProviderId(externalProviderId)
                 .externalId(externalId)
                 .build();
 
-        String seriesNameClean = seriesNameFormat.format(seriesName, context);
+        String seriesNameClean = mediaNameFormat.format(seriesName, context);
 
         if (!seriesName.equals(seriesNameClean)) {
             logDebug("Cleaned series name: '" + seriesName + "' to '" + seriesNameClean + "'");
@@ -76,53 +77,45 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
         return basePath + "/" + seriesNameClean + ".json";
     }
 
-    private void processSeriesStream(Map<String, Object> stream) {
+    private void processSeriesStream(SerieItem serieItem) {
         try {
-            Object seriesIdObj = stream.get("series_id");
-            String seriesId = String.valueOf(seriesIdObj);
+            String seriesId = String.valueOf(serieItem.getSeriesId());
 
             logDebug("Updating stream for #" + seriesId);
 
-            Object dataResult = getData(XtreamEndpoint.PLAYER, XtreamAction.SERIES_INFO, seriesId);
+            SerieDetails details = getData(Endpoint.PLAYER, Action.SERIES_INFO, seriesId, SerieDetails.class);
 
-            if (dataResult != null) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> dataMap = (Map<String, Object>) dataResult;
-                stream.putAll(dataMap);
+            if (details != null) {
+                SerieInfo info = details.getInfo();
 
-                @SuppressWarnings("unchecked")
-                Map<String, Object> streamInfo = (Map<String, Object>) stream.get("info");
-
-                Object addedObj = streamInfo.get("last_modified");
-                long addedTimestamp = Long.parseLong(String.valueOf(addedObj));
+                long addedTimestamp = Long.parseLong(info.getLastModified());
                 Instant date = Instant.ofEpochSecond(addedTimestamp);
 
-                String streamInfoPath = getStreamInfoPath(stream);
+                String streamInfoPath = getStreamInfoPath(serieItem, info);
 
                 logDebug("processing series stream: " + streamInfoPath);
 
                 if (writeMetadataJson) {
-                    addFile(streamInfoPath, stream, date);
+                    addFile(streamInfoPath, details, date);
                 }
 
                 // Generate and write tvshow.nfo
                 String basePath = StringUtils.substringBeforeLast(streamInfoPath, "/");
                 if (writeMetadataNfo) {
                     String nfoPath = basePath + "/tvshow.nfo";
-                    String nfoContent = NfoGenerator.generateTvShowNfo(stream);
+                    String nfoContent = NfoGenerator.generateTvShowNfo(serieItem, info);
                     if (nfoContent != null) {
                         addFile(nfoPath, nfoContent, date);
                     }
                 }
 
-                @SuppressWarnings("unchecked")
-                Map<String, List<Map<String, Object>>> episodesData = (Map<String, List<Map<String, Object>>>) stream.get("episodes");
+                Map<String, List<SerieEpisode>> episodesData = details.getEpisodes();
 
                 if (episodesData != null) {
-                    for (Map.Entry<String, List<Map<String, Object>>> seasonEntry : episodesData.entrySet()) {
-                        List<Map<String, Object>> seasonData = seasonEntry.getValue();
+                    for (Map.Entry<String, List<SerieEpisode>> seasonEntry : episodesData.entrySet()) {
+                        List<SerieEpisode> seasonData = seasonEntry.getValue();
 
-                        for (Map<String, Object> episode : seasonData) {
+                        for (SerieEpisode episode : seasonData) {
                             processEpisode(basePath, episode);
                         }
                     }
@@ -130,27 +123,20 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
             }
 
         } catch (Exception ex) {
-            logError("Failed to process stream, Stream: " + stream + ", Error: " + ex.getMessage(), ex);
+            logError("Failed to process stream, Series: " + serieItem.getName() + ", Error: " + ex.getMessage(), ex);
         }
     }
 
-    private void processEpisode(String basePath, Map<String, Object> episode) {
+    private void processEpisode(String basePath, SerieEpisode episode) {
         String seriesName = StringUtils.substringAfterLast(basePath, "/");
 
         try {
-            Object streamIdObj = episode.get("id");
-            String streamId = String.valueOf(streamIdObj);
+            String streamId = episode.getId();
+            int episodeNumber = episode.getEpisodeNum();
+            int seasonNumber = episode.getSeason();
+            String containerExtension = episode.getContainerExtension();
 
-            Object episodeNumberObj = episode.get("episode_num");
-            int episodeNumber = Integer.parseInt(String.valueOf(episodeNumberObj));
-
-            Object seasonNumberObj = episode.get("season");
-            int seasonNumber = Integer.parseInt(String.valueOf(seasonNumberObj));
-
-            String containerExtension = (String) episode.get("container_extension");
-
-            Object addedObj = episode.get("added");
-            long addedTimestamp = Long.parseLong(String.valueOf(addedObj));
+            long addedTimestamp = Long.parseLong(episode.getAdded());
 
             String seasonPad = String.format("%02d", seasonNumber);
             String episodeShort = String.format("%02d", episodeNumber);
@@ -178,8 +164,15 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
 
         } catch (Exception ex) {
             logError("Failed to process series, Series: " + seriesName +
-                    ", Episode: " + episode + ", Error: " + ex.getMessage(), ex);
+                    ", Episode: " + episode.getTitle() + ", Error: " + ex.getMessage(), ex);
         }
+    }
+
+    private String extractYearFromDate(String date) {
+        if (date != null && date.length() >= 4) {
+            return date.substring(0, 4);
+        }
+        return null;
     }
 
 }

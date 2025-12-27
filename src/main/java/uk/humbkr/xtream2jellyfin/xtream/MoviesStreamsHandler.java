@@ -1,11 +1,12 @@
-package uk.humbkr.xtream2jellyfin.streamhandler;
+package uk.humbkr.xtream2jellyfin.xtream;
 
 import lombok.extern.slf4j.Slf4j;
-import uk.humbkr.xtream2jellyfin.config.GlobalSettings;
+import uk.humbkr.xtream2jellyfin.config.AppSettings;
 import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
 import uk.humbkr.xtream2jellyfin.filemanager.FileManager;
 import uk.humbkr.xtream2jellyfin.metadata.NfoGenerator;
 import uk.humbkr.xtream2jellyfin.nameformat.StreamNameFormatContext;
+import uk.humbkr.xtream2jellyfin.xtream.model.MediaType;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -17,8 +18,8 @@ public class MoviesStreamsHandler extends BaseStreamsHandler {
 
     public MoviesStreamsHandler(XtreamProviderConfig providerConfig,
                                 FileManager fileManager,
-                                GlobalSettings globalSettings) {
-        super(providerConfig, fileManager, globalSettings, log);
+                                AppSettings appSettings) {
+        super(providerConfig, fileManager, appSettings, log);
     }
 
     @Override
@@ -27,7 +28,9 @@ public class MoviesStreamsHandler extends BaseStreamsHandler {
     }
 
     @Override
-    protected void processItem(Map<String, Object> stream) throws Exception {
+    protected void processItem(Object item) throws Exception {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> stream = (Map<String, Object>) item;
         processMovieStream(stream);
     }
 
@@ -62,7 +65,7 @@ public class MoviesStreamsHandler extends BaseStreamsHandler {
                 .externalId(externalId)
                 .build();
 
-        String movieNameClean = movieNameFormat.format(movieName, context);
+        String movieNameClean = mediaNameFormat.format(movieName, context);
 
         List<String> baseFilePathParts = new ArrayList<>();
         baseFilePathParts.add(mediaDir + "s");
