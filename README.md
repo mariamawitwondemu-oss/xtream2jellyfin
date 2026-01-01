@@ -6,18 +6,15 @@ Import IPTV VOD streams into Jellyfin.
 
 ## Overview
 
-`xtream2jellyfin` is a Java-based IPTV stream converter that bridges Xtream Codes IPTV providers with Jellyfin. It converts IPTV content from Xtream API endpoints into organized file structures (STRM and JSON files) that Jellyfin can consume.
+`xtream2jellyfin` is a Java-based IPTV stream converter that bridges Xtream Codes IPTV providers with Jellyfin. It converts IPTV content from Xtream API endpoints into organized file structures (STRM files) that Jellyfin can consume.
 
 ## Features
 
 - multi-provider support: handle multiple IPTV providers simultaneously
 - content types:
-  - live TV channels with M3U playlists and EPG (Electronic Program Guide)
-  - movies (VOD) with .strm files and optional metadata
+  - movies (VOD) with .strm files
   - TV series with organized season/episode structures
-- metadata support:
-  - NFO files (Jellyfin/Kodi compatible) for movies, series, and episodes
-  - optional JSON metadata files
+- metadata support: NFO files (Jellyfin/Kodi compatible) for movies, series, and episodes
 - flexible configuration:
   - per-media-type settings with regex-based name cleaning
   - category filtering (include/exclude lists)
@@ -55,7 +52,6 @@ cp config/config.example.yaml config/config.yaml
 app:
   file_manager_type: "simple"    # file manager: "simple" or "cached" (default: "simple")
   media_dir: "media"             # base media output directory (default: "media")
-  write_metadata_json: false     # write metadata JSON files (default: false)
   write_metadata_nfo: true       # write NFO metadata files for Jellyfin/Kodi (default: true)
 
   # Logging configuration
@@ -94,20 +90,6 @@ providers:
       token: "your_jellyfin_api_token"
 
     settings:
-      live:
-        enabled: true
-        category_folder: true
-        use_server_info: false
-
-        # Stream name cleanup patterns
-        name_cleanup_patterns:
-          "^\\[.*\\]\\s*": ""
-          "\\s*\\[.*\\]$": ""
-
-        # Category filtering (use IDs from provider)
-        include_category_ids: []  # if set, only these categories are processed
-        exclude_category_ids: []  # ignored if include_category_ids is set
-
       movies:
         enabled: true
         category_folder: true
@@ -143,7 +125,6 @@ providers:
   - `simple`: writes files directly to disk
   - `cached`: tracks changes and only writes modified files
 - `media_dir`: base media output directory (default: `media`)
-- `write_metadata_json`: write metadata JSON files for movies and series (default: `false`)
 - `write_metadata_nfo`: write NFO metadata files compatible with Jellyfin/Kodi (default: `true`)
 - `logging`: logging configuration
   - `level`: root log level - `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR` (default: `INFO`)
@@ -167,7 +148,7 @@ Each provider can have the following settings:
   - `protocol`/`hostname`/`port`: Jellyfin server details
   - `token`: API token for authentication
 
-#### Media-Type Settings (live, movies, series)
+#### Media-Type Settings (movies, series)
 
 - `enabled`: enable/disable this media type
 - `category_folder`: organize content by category
@@ -191,23 +172,18 @@ All configuration is now centralized in `config/config.yaml`. No environment var
 ```
 media/
   {provider_name}/
-    live/
-      live.m3u          # M3U playlist for all live channels
-      epg.xml           # EPG data
     movies/
       {category}/       # optional category folder
         {movie_name}/
-          {movie_name}.strm     # stream URL
-          {movie_name}.nfo      # metadata (if write_metadata_nfo=true)
-          {movie_name}.json     # metadata (if write_metadata_json=true)
+          {movie_name}.strm
+          {movie_name}.nfo
     series/
       {category}/       # optional category folder
         {series_name}/
-          tvshow.nfo            # series metadata (if write_metadata_nfo=true)
-          {series_name}.json    # series metadata (if write_metadata_json=true)
+          tvshow.nfo
           Season 01/
             {series} - S01E01.strm
-            {series} - S01E01.nfo    # episode metadata (if write_metadata_nfo=true)
+            {series} - S01E01.nfo
             {series} - S01E02.strm
             {series} - S01E02.nfo
 ```
