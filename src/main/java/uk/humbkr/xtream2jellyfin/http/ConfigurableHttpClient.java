@@ -58,20 +58,18 @@ public class ConfigurableHttpClient implements AutoCloseable {
                 }
 
                 // Non-successful status code
-                log.debug("Request failed with status code: {}, attempt {}/{}",
-                        statusCode, attempt + 1, maxRetries + 1);
+                log.info("Request failed with status code: {}, attempt {}/{}", statusCode, attempt + 1, maxRetries + 1);
 
                 lastException = new IOException("HTTP " + statusCode + ": " + response.body());
 
             } catch (IOException e) {
                 lastException = e;
-                log.debug("Request failed with IOException: {}, attempt {}/{}",
-                        e.getMessage(), attempt + 1, maxRetries + 1);
+                log.info("Request failed with IOException: {}, attempt {}/{}", e.getMessage(), attempt + 1, maxRetries + 1);
             }
 
             // Wait before retry (except on last attempt)
             if (attempt < maxRetries && retryDelayMillis > 0) {
-                log.debug("Retrying in {} ms...", retryDelayMillis);
+                log.info("Retrying in {} ms...", retryDelayMillis);
                 Thread.sleep(retryDelayMillis);
             }
         }

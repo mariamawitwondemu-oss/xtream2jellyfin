@@ -56,8 +56,6 @@ public abstract class BaseStreamsHandler {
 
     protected final CategoryNameFormat categoryNameFormat;
 
-//    protected final Class<?> streamItemClass;
-
     private final Logger log;
 
     protected String providerUrl;

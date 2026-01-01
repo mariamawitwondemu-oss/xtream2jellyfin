@@ -10,7 +10,7 @@ import uk.humbkr.xtream2jellyfin.nameformat.StreamNameFormatContext;
 import uk.humbkr.xtream2jellyfin.xtream.model.*;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 
 @Slf4j
 public class MoviesStreamsHandler extends BaseStreamsHandler {
@@ -35,7 +35,6 @@ public class MoviesStreamsHandler extends BaseStreamsHandler {
 
     private void processMovieStream(MovieItem movieItem) {
         String movieName = movieItem.getName();
-        Long added = movieItem.getAdded();
         String categoryId = movieItem.getCategoryId();
 
         String movieId = String.valueOf(movieItem.getStreamId());
@@ -49,19 +48,18 @@ public class MoviesStreamsHandler extends BaseStreamsHandler {
 
         movieName = mediaNameFormat.format(movieName, context);
 
-        List<String> baseFilePathParts = new ArrayList<>();
-        baseFilePathParts.add(mediaDir + "s");
+        Collection<String> movieFolder = new ArrayList<>();
+        movieFolder.add(mediaDir + "s");
 
         if (categoryFolder) {
-            baseFilePathParts.add(movieCategory);
+            movieFolder.add(movieCategory);
         }
 
-        baseFilePathParts.add(movieName);
-        baseFilePathParts.add(movieName);
+        movieFolder.add(movieName);
 
-        String baseFilePath = String.join("/", baseFilePathParts);
+        String moviePath = String.join("/", movieFolder);
 
-        String streamFile = baseFilePath + ".strm";
+        String streamFile = moviePath + ".strm";
         String streamUrl = buildStreamUrl(movieId, containerExtension);
 
         addFile(streamFile, streamUrl);
@@ -69,7 +67,7 @@ public class MoviesStreamsHandler extends BaseStreamsHandler {
         // Generate and write movie NFO
         if (writeMetadataNfo) {
             MovieDetails movieDetails = getData(Endpoint.PLAYER, Action.VOD_INFO, movieId, MovieDetails.class);
-            String nfoFile = baseFilePath + ".nfo";
+            String nfoFile = moviePath + ".nfo";
             String nfoContent = NfoGenerator.generateMovieNfo(movieItem, movieDetails);
             if (nfoContent != null) {
                 addFile(nfoFile, nfoContent);

@@ -21,6 +21,56 @@ Import IPTV VOD streams into Jellyfin.
   - HTTP client configuration (timeouts, rate limiting, retries)
   - customizable logging levels
 - Jellyfin integration: automatic library refresh after content updates
+- intelligent caching: optional file manager that prevents unnecessary disk writes
+
+## Cached File Manager
+
+The cached file manager is an optional optimization that significantly improves performance when syncing with Jellyfin by preventing unnecessary metadata refreshes.
+
+### How it works
+
+When enabled (`file_manager_type: "cached"`), the application:
+
+1. **Tracks file content using MD5 hashing**: before writing any file (STRM, NFO), it computes an MD5 hash of the content
+2. **Compares against previous state**: checks if the file was previously written with the same content hash
+3. **Skips unchanged files**: only writes files to disk when content has actually changed
+4. **Manages stale files**: automatically removes files that are no longer present in the IPTV provider's catalog
+
+### Why this matters for Jellyfin
+
+Jellyfin's library scanner uses **file modification timestamps** (mtime) to detect changes, not content hashing. This means:
+
+- **Without caching**: every run rewrites all files → updates all mtimes → triggers full metadata refresh in Jellyfin
+- **With caching**: only changed files are written → only changed items trigger metadata refresh
+
+During a metadata refresh, Jellyfin performs expensive operations:
+- Re-probes video files with FFmpeg
+- Re-reads and parses NFO metadata
+- Regenerates extracted data (chapters, trickplay images)
+- Updates the database
+
+### Performance impact
+
+For a library with thousands of items where content rarely changes:
+
+- **Without caching**: Jellyfin re-scans entire library every sync (potentially hours)
+- **With caching**: Jellyfin only processes new/modified items (seconds to minutes)
+
+### Configuration
+
+Enable in `config/config.yaml`:
+
+```yaml
+app:
+  file_manager_type: "cached"  # use cached file manager
+```
+
+The cache database is stored in `{media_dir}/{provider_name}/.cache/files.json`.
+
+### When to use each mode
+
+- **`simple`**: first-time setup, troubleshooting, or when you want every file rewritten
+- **`cached`**: production use with scheduled syncs (recommended for best performance)
 
 ## Requirements
 

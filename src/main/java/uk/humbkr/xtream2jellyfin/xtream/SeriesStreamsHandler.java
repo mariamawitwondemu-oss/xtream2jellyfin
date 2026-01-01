@@ -11,6 +11,7 @@ import uk.humbkr.xtream2jellyfin.nameformat.StreamNameFormatContext;
 import uk.humbkr.xtream2jellyfin.xtream.model.*;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -32,49 +33,29 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
         processSeriesStream((SeriesItem) item);
     }
 
-    private String getSeriesBasePath(SeriesItem seriesItem, SeriesInfo info) {
+    private String getSeriesFolderPath(SeriesItem seriesItem, SeriesInfo seriesInfo) {
         String seriesName = seriesItem.getName();
         String categoryId = String.valueOf(seriesItem.getCategoryId());
 
         String seriesCategory = categories.get(categoryId);
 
-        // Format series name with Jellyfin-compatible naming
-        String tmdbId = (info != null && info.getCategoryId() != null) ? info.getCategoryId() : null;
-        String tvdbId = null;
-
-        // Prefer TVDB ID for series, fallback to TMDB
-        String externalProviderId = null;
-        String externalId = null;
-        if (tvdbId != null && !tvdbId.isEmpty()) {
-            externalProviderId = "tvdbid";
-            externalId = tvdbId;
-        } else if (tmdbId != null && !tmdbId.isEmpty()) {
-            externalProviderId = "tmdbid";
-            externalId = tmdbId;
-        }
-
         StreamNameFormatContext context = StreamNameFormatContext.builder()
-                .year(seriesItem.getReleaseDate() != null ? extractYearFromDate(seriesItem.getReleaseDate()) : null)
-                .externalProviderId(externalProviderId)
-                .externalId(externalId)
+                .externalProviderId("tmdbid")
+                .externalId(seriesInfo.getTmdb())
                 .build();
 
-        String seriesNameClean = mediaNameFormat.format(seriesName, context);
+        seriesName = mediaNameFormat.format(seriesName, context);
 
-        if (!seriesName.equals(seriesNameClean)) {
-            logDebug("Cleaned series name: '" + seriesName + "' to '" + seriesNameClean + "'");
-        }
-
-        List<String> basePathParts = new ArrayList<>();
-        basePathParts.add(mediaDir);
+        Collection<String> folderPath = new ArrayList<>();
+        folderPath.add(mediaDir);
 
         if (categoryFolder) {
-            basePathParts.add(seriesCategory);
+            folderPath.add(seriesCategory);
         }
 
-        basePathParts.add(seriesNameClean);
+        folderPath.add(seriesName);
 
-        return String.join("/", basePathParts) + "/" + seriesNameClean;
+        return String.join("/", folderPath);
     }
 
     private void processSeriesStream(SeriesItem seriesItem) {
@@ -91,7 +72,7 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
                 long addedTimestamp = Long.parseLong(info.getLastModified());
 
                 // Generate and write tvshow.nfo
-                String basePath = getSeriesBasePath(seriesItem, info);
+                String basePath = getSeriesFolderPath(seriesItem, info);
                 if (writeMetadataNfo) {
                     String nfoPath = basePath + "/tvshow.nfo";
                     String nfoContent = NfoGenerator.generateTvShowNfo(seriesItem, info);
