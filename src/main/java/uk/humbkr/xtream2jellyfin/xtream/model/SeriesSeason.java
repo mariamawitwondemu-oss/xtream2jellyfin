@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 @Data
-public class SerieSeason {
+public class SeriesSeason {
 
     @JsonProperty("air_date")
     private String airDate;

@@ -54,4 +54,8 @@ public class Constants {
             "User-Agent", DEFAULT_USER_AGENT
     );
 
+    // Various Constants
+
+    public static final String YOUTUBE_VIDEO_URL = "https://www.youtube.com/watch?v=";
+
 }

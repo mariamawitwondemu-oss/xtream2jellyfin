@@ -1,16 +1,13 @@
 package uk.humbkr.xtream2jellyfin;
 
-import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.classic.joran.JoranConfigurator;
-import ch.qos.logback.core.joran.spi.JoranException;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.LoggerFactory;
 import uk.humbkr.xtream2jellyfin.command.CommandExecutor;
 import uk.humbkr.xtream2jellyfin.common.Constants;
 import uk.humbkr.xtream2jellyfin.common.YamlUtils;
 import uk.humbkr.xtream2jellyfin.config.AppConfig;
 import uk.humbkr.xtream2jellyfin.config.AppSettings;
 import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
+import uk.humbkr.xtream2jellyfin.logging.LogbackConfigurator;
 import uk.humbkr.xtream2jellyfin.xtream.XtreamProcessor;
 
 import java.io.File;
@@ -22,45 +19,33 @@ import java.util.List;
 public class Xtream2JellyfinApp {
 
     public static void main(String[] args) {
-        loadLogbackConfig();
-
         Xtream2JellyfinApp app = new Xtream2JellyfinApp();
+        AppConfig appConfig = app.readConfig();
+
+        // Apply logging level overrides from config.yaml
+        // Base configuration is loaded from logback.xml in resources
+        LogbackConfigurator.apply(appConfig.getAppSettings().getLogging());
 
         if (args.length > 0) {
-            AppConfig appConfig = app.readConfig();
             CommandExecutor commandExecutor = new CommandExecutor(appConfig);
             commandExecutor.execute(args);
         } else {
-            app.run();
+            app.run(appConfig);
         }
     }
 
-    private static void loadLogbackConfig() {
-        File logBackConfig = new File(Constants.LOGBACK_CONFIG_FILE);
-        if (logBackConfig.exists()) {
-            LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
-            try {
-                JoranConfigurator configurator = new JoranConfigurator();
-                configurator.setContext(context);
-                context.reset();
-                configurator.doConfigure(logBackConfig);
-                System.out.println("Loaded logback configuration from: " + Constants.LOGBACK_CONFIG_FILE);
-            } catch (JoranException e) {
-                System.err.println("Failed to load logback configuration: " + e.getMessage());
-            }
-        }
-    }
-
-    public void run() {
+    public void run(AppConfig appConfig) {
         log.info("Starting xtream2jellyfin");
 
-        AppConfig appConfig = this.readConfig();
         List<Thread> threads = new ArrayList<>();
 
         for (XtreamProviderConfig providerConfig : appConfig.getProviders().values()) {
             String providerName = providerConfig.getName();
-
-            Thread thread = new Thread(() -> processProviderStreams(appConfig.getAppSettings(), providerConfig));
+            if (!providerConfig.isEnabled()) {
+                log.info("Skipping disabled provider {}", providerName);
+                continue;
+            }
+            Thread thread = new Thread(() -> runXtreamProcessor(appConfig.getAppSettings(), providerConfig));
             thread.setName("provider-" + providerName);
             threads.add(thread);
             thread.start();
@@ -93,9 +78,9 @@ public class Xtream2JellyfinApp {
         return new AppConfig();
     }
 
-    private void processProviderStreams(AppSettings appSettings, XtreamProviderConfig providerConfig) {
+    private void runXtreamProcessor(AppSettings appSettings, XtreamProviderConfig providerConfig) {
         try (XtreamProcessor xtreamProcessor = new XtreamProcessor(appSettings, providerConfig)) {
-            xtreamProcessor.processStreams();
+            xtreamProcessor.run();
         }
     }
 

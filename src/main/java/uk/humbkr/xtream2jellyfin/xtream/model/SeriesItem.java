@@ -6,7 +6,7 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-public class SerieItem implements StreamItem {
+public class SeriesItem implements StreamItem {
 
     private Integer num;
 
@@ -25,7 +25,7 @@ public class SerieItem implements StreamItem {
 
     private String genre;
 
-    @JsonProperty("releaseDate")
+    @JsonProperty("release_date")
     private String releaseDate;
 
     @JsonProperty("last_modified")
@@ -47,5 +47,9 @@ public class SerieItem implements StreamItem {
 
     @JsonProperty("category_id")
     private String categoryId;
+
+    public String getYoutubeTrailerUrl() {
+        return ModelUtils.getYoutubeTrailerUrl(youtubeTrailer);
+    }
 
 }

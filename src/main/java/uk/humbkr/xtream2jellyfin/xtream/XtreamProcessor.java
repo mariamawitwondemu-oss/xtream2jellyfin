@@ -2,19 +2,18 @@ package uk.humbkr.xtream2jellyfin.xtream;
 
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
+import uk.humbkr.xtream2jellyfin.common.StringUtils;
 import uk.humbkr.xtream2jellyfin.config.AppSettings;
 import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
 import uk.humbkr.xtream2jellyfin.filemanager.CachedFileManager;
 import uk.humbkr.xtream2jellyfin.filemanager.FileManager;
 import uk.humbkr.xtream2jellyfin.filemanager.SimpleFileManager;
+import uk.humbkr.xtream2jellyfin.http.ConfigurableHttpClient;
 import uk.humbkr.xtream2jellyfin.xtream.model.Endpoint;
 import uk.humbkr.xtream2jellyfin.xtream.model.Profile;
 import uk.humbkr.xtream2jellyfin.xtream.model.ServerInfo;
 import uk.humbkr.xtream2jellyfin.xtream.model.UserInfo;
 
-import java.net.http.HttpClient;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -29,7 +28,7 @@ public class XtreamProcessor implements AutoCloseable {
 
     private final XtreamProviderConfig providerConfig;
 
-    private final HttpClient httpClient;
+    private final ConfigurableHttpClient httpClient;
 
     private final FileManager fileManager;
 
@@ -40,19 +39,19 @@ public class XtreamProcessor implements AutoCloseable {
         this.providerName = providerConfig.getName();
         this.providerConfig = providerConfig;
 
-        this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30)).build();
+        this.httpClient = new ConfigurableHttpClient(providerConfig.getHttpClientConfig());
 
         this.fileManager = this.createFileManager(appSettings);
         log.info("Using file manager: {}", this.fileManager.getClass().getSimpleName());
 
         if (providerConfig.getLiveSettings().isEnabled()) {
-            streamHandlers.add(new LiveStreamsHandler(providerConfig, fileManager, appSettings));
+            streamHandlers.add(new LiveStreamsHandler(providerConfig, fileManager, appSettings, httpClient));
         }
         if (providerConfig.getSeriesSettings().isEnabled()) {
-            streamHandlers.add(new SeriesStreamsHandler(providerConfig, fileManager, appSettings));
+            streamHandlers.add(new SeriesStreamsHandler(providerConfig, fileManager, appSettings, httpClient));
         }
         if (providerConfig.getMoviesSettings().isEnabled()) {
-            streamHandlers.add(new MoviesStreamsHandler(providerConfig, fileManager, appSettings));
+            streamHandlers.add(new MoviesStreamsHandler(providerConfig, fileManager, appSettings, httpClient));
         }
     }
 
@@ -67,7 +66,7 @@ public class XtreamProcessor implements AutoCloseable {
         }
     }
 
-    public void processStreams() {
+    public void run() {
 
         if (!this.checkBeforeProcessing()) {
             return;
@@ -145,8 +144,8 @@ public class XtreamProcessor implements AutoCloseable {
 
     private void waitForNextIteration() {
         long now = System.currentTimeMillis();
-        long nextInterval = 60L * providerConfig.getScanInterval() * 1000;
-        long nextIteration = now + nextInterval;
+        long interval = 60L * providerConfig.getScanIntervalMinutes() * 1000;
+        long nextIteration = now + interval;
 
         LocalDateTime nextIterationTime = LocalDateTime.ofInstant(
                 Instant.ofEpochMilli(nextIteration),
@@ -158,7 +157,7 @@ public class XtreamProcessor implements AutoCloseable {
         log.info("Next iteration for {} at {}", providerName, nextIterationIso);
 
         try {
-            Thread.sleep(nextInterval);
+            Thread.sleep(interval);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.warn("Interrupted while waiting for next iteration", e);

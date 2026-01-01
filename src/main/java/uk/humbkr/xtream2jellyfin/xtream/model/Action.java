@@ -15,11 +15,11 @@ public enum Action {
     LIVE_CATEGORIES("get_live_categories", Category.class, List.class),
     LIVE_STREAMS("get_live_streams", Object.class, List.class),
     SERIES_CATEGORIES("get_series_categories", Category.class, List.class),
-    SERIES_STREAMS("get_series", SerieItem.class, List.class),
+    SERIES_STREAMS("get_series", SeriesItem.class, List.class),
     VOD_CATEGORIES("get_vod_categories", Category.class, List.class),
-    VOD_STREAMS("get_vod_streams", Object.class, List.class),
-    SERIES_INFO("get_series_info", SerieInfo.class),
-    VOD_INFO("get_vod_info", Object.class),
+    VOD_STREAMS("get_vod_streams", MovieItem.class, List.class),
+    SERIES_INFO("get_series_info", SeriesInfo.class),
+    VOD_INFO("get_vod_info", MovieDetails.class),
     EPG_INFO("get_short_epg", Object.class);
 
     private final String value;

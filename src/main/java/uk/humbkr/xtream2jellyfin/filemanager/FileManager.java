@@ -15,6 +15,6 @@ public interface FileManager {
      */
     void onProcessEnd();
 
-    void save(String path, Object content, String date);
+    void save(String path, Object content);
 
 }

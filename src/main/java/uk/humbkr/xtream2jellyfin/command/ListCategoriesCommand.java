@@ -5,11 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import uk.humbkr.xtream2jellyfin.common.JsonUtils;
 import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
+import uk.humbkr.xtream2jellyfin.http.ConfigurableHttpClient;
 import uk.humbkr.xtream2jellyfin.xtream.model.*;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
@@ -21,7 +21,7 @@ import java.util.Map;
 @Slf4j
 public class ListCategoriesCommand {
 
-    private final HttpClient httpClient;
+    private final ConfigurableHttpClient httpClient;
 
     private final ObjectMapper objectMapper;
 
@@ -30,9 +30,7 @@ public class ListCategoriesCommand {
     public ListCategoriesCommand(XtreamProviderConfig providerConfig) {
         this.providerConfig = providerConfig;
         this.objectMapper = JsonUtils.getJsonMapper();
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(30))
-                .build();
+        this.httpClient = new ConfigurableHttpClient(providerConfig.getHttpClientConfig());
     }
 
     public void execute(MediaType mediaType) {

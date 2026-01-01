@@ -1,9 +1,16 @@
 app:
-  run_once: false
   file_manager_type: "simple"
   media_dir: "media"
   write_metadata_json: false
   write_metadata_nfo: true
+
+  # Logging configuration
+  logging:
+    level: "INFO"                    # Root log level: TRACE, DEBUG, INFO, WARN, ERROR
+    loggers:
+      "io.prometheus": "WARN"
+      "uk.humbkr.xtream2jellyfin": "DEBUG"
+      "uk.humbkr.xtream2jellyfin.filemanager.CachedFileManager": "INFO"
 
 providers:
   provider1:
@@ -11,6 +18,13 @@ providers:
     password: "your_password"
     url: "http://your-xtream-server.com"
     interval: 360  # minutes
+
+    # HTTP client configuration
+    http_client:
+      timeout_seconds: 30      # Request timeout (default: 30)
+      rate_limit: "100/s"      # Rate limit: {count}/{unit} - s=second, m=minute, h=hour, d=day (default: "100/s")
+      retry_delay_seconds: 1   # Delay before retrying failed requests (default: 1)
+      max_retries: 3           # Maximum number of retry attempts (default: 3)
 
     # Category name cleanup patterns (applied to folder names)
     # Jellyfin automatically handles: | -> -, & -> and, : removed, etc.

@@ -6,7 +6,10 @@
         </encoder>
     </appender>
 
-    <root level="${DEBUG:-INFO}">
+    <!-- Default logger levels (can be overridden via config.yaml) -->
+    <logger name="uk.humbkr.xtream2jellyfin" level="INFO"/>
+
+    <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>
 </configuration>

@@ -4,22 +4,22 @@ import lombok.extern.slf4j.Slf4j;
 import uk.humbkr.xtream2jellyfin.config.AppSettings;
 import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
 import uk.humbkr.xtream2jellyfin.filemanager.FileManager;
+import uk.humbkr.xtream2jellyfin.http.ConfigurableHttpClient;
 import uk.humbkr.xtream2jellyfin.metadata.NfoGenerator;
 import uk.humbkr.xtream2jellyfin.nameformat.StreamNameFormatContext;
-import uk.humbkr.xtream2jellyfin.xtream.model.MediaType;
+import uk.humbkr.xtream2jellyfin.xtream.model.*;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 public class MoviesStreamsHandler extends BaseStreamsHandler {
 
     public MoviesStreamsHandler(XtreamProviderConfig providerConfig,
                                 FileManager fileManager,
-                                AppSettings appSettings) {
-        super(providerConfig, fileManager, appSettings, log);
+                                AppSettings appSettings,
+                                ConfigurableHttpClient httpClient) {
+        super(providerConfig, fileManager, appSettings, httpClient, log);
     }
 
     @Override
@@ -28,44 +28,26 @@ public class MoviesStreamsHandler extends BaseStreamsHandler {
     }
 
     @Override
-    protected void processItem(Object item) throws Exception {
-        @SuppressWarnings("unchecked")
-        Map<String, Object> stream = (Map<String, Object>) item;
-        processMovieStream(stream);
+    protected void processItem(Object item) {
+        MovieItem movieItem = (MovieItem) item;
+        processMovieStream(movieItem);
     }
 
-    private void processMovieStream(Map<String, Object> movieStream) {
-        String movieName = (String) movieStream.get("name");
-        Object addedObj = movieStream.get("added");
-        String categoryId = String.valueOf(movieStream.get("category_id"));
+    private void processMovieStream(MovieItem movieItem) {
+        String movieName = movieItem.getName();
+        Long added = movieItem.getAdded();
+        String categoryId = movieItem.getCategoryId();
 
-        Object movieIdObj = movieStream.get("stream_id");
-        String movieId = String.valueOf(movieIdObj);
-        String containerExtension = (String) movieStream.get("container_extension");
+        String movieId = String.valueOf(movieItem.getStreamId());
+        String containerExtension = movieItem.getContainerExtension();
         String movieCategory = categories.get(categoryId);
 
-        // Format movie name with Jellyfin-compatible naming
-        String tmdbId = extractTmdbId(movieStream);
-        String imdbId = extractImdbId(movieStream);
-
-        // Prefer TMDB ID for movies, fallback to IMDB
-        String externalProviderId = null;
-        String externalId = null;
-        if (tmdbId != null && !tmdbId.isEmpty()) {
-            externalProviderId = "tmdbid";
-            externalId = tmdbId;
-        } else if (imdbId != null && !imdbId.isEmpty()) {
-            externalProviderId = "imdbid";
-            externalId = imdbId;
-        }
-
         StreamNameFormatContext context = StreamNameFormatContext.builder()
-                .year(extractYear(movieStream))
-                .externalProviderId(externalProviderId)
-                .externalId(externalId)
+                .externalProviderId("tmdbid")
+                .externalId(movieItem.getTmdbId())
                 .build();
 
-        String movieNameClean = mediaNameFormat.format(movieName, context);
+        movieName = mediaNameFormat.format(movieName, context);
 
         List<String> baseFilePathParts = new ArrayList<>();
         baseFilePathParts.add(mediaDir + "s");
@@ -74,30 +56,23 @@ public class MoviesStreamsHandler extends BaseStreamsHandler {
             baseFilePathParts.add(movieCategory);
         }
 
-        baseFilePathParts.add(movieNameClean);
-        baseFilePathParts.add(movieNameClean);
+        baseFilePathParts.add(movieName);
+        baseFilePathParts.add(movieName);
 
         String baseFilePath = String.join("/", baseFilePathParts);
 
         String streamFile = baseFilePath + ".strm";
         String streamUrl = buildStreamUrl(movieId, containerExtension);
 
-        String streamDataFile = baseFilePath + ".json";
-
-        long addedTimestamp = Long.parseLong(String.valueOf(addedObj));
-        Instant date = Instant.ofEpochSecond(addedTimestamp);
-
-        addFile(streamFile, streamUrl, date);
-        if (writeMetadataJson) {
-            addFile(streamDataFile, movieStream, date);
-        }
+        addFile(streamFile, streamUrl);
 
         // Generate and write movie NFO
         if (writeMetadataNfo) {
+            MovieDetails movieDetails = getData(Endpoint.PLAYER, Action.VOD_INFO, movieId, MovieDetails.class);
             String nfoFile = baseFilePath + ".nfo";
-            String nfoContent = NfoGenerator.generateMovieNfo(movieStream);
+            String nfoContent = NfoGenerator.generateMovieNfo(movieItem, movieDetails);
             if (nfoContent != null) {
-                addFile(nfoFile, nfoContent, date);
+                addFile(nfoFile, nfoContent);
             }
         }
     }

@@ -17,7 +17,6 @@ public class SimpleFileManager extends BaseFileManager implements FileManager {
     @Override
     public void onProcessStart() {
         this.deleteDirectory(rootDir);
-        log.info("Cleaned up directory: {}", rootDir);
     }
 
     @Override
@@ -26,7 +25,7 @@ public class SimpleFileManager extends BaseFileManager implements FileManager {
     }
 
     @Override
-    public void save(String path, Object content, String dakte) {
+    public void save(String path, Object content) {
         try {
             Path filePath = Paths.get(path);
             FileManagerUtils.prepareDirectory(filePath.getParent().toString());
@@ -55,23 +54,22 @@ public class SimpleFileManager extends BaseFileManager implements FileManager {
             Path path = Paths.get(directoryPath);
             if (Files.exists(path)) {
                 Files.walkFileTree(path,
-                        new SimpleFileVisitor<Path>() {
+                        new SimpleFileVisitor<>() {
                             @Override
-                            public FileVisitResult postVisitDirectory(
-                                    Path dir, IOException exc) throws IOException {
+                            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
                                 Files.delete(dir);
                                 return FileVisitResult.CONTINUE;
                             }
 
                             @Override
-                            public FileVisitResult visitFile(
-                                    Path file, BasicFileAttributes attrs)
-                                    throws IOException {
+                            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                                 Files.delete(file);
                                 return FileVisitResult.CONTINUE;
                             }
                         });
-                log.debug("Deleted directory: {}", directoryPath);
+                log.info("Deleted directory: {}", directoryPath);
+            } else {
+                log.info("Directory does not exist: {}", directoryPath);
             }
         } catch (IOException e) {
             log.error("Failed to delete directory: {}", directoryPath, e);

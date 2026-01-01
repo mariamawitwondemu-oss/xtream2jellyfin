@@ -6,7 +6,7 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-public class SerieInfo {
+public class SeriesInfo {
 
     private String name;
 
@@ -20,7 +20,7 @@ public class SerieInfo {
 
     private String genre;
 
-    @JsonProperty("releaseDate")
+    @JsonProperty("release_date")
     private String releaseDate;
 
     @JsonProperty("last_modified")
@@ -37,10 +37,16 @@ public class SerieInfo {
     @JsonProperty("youtube_trailer")
     private String youtubeTrailer;
 
+    private String tmdb;
+
     @JsonProperty("episode_run_time")
     private String episodeRunTime;
 
     @JsonProperty("category_id")
     private String categoryId;
+
+    public String getYoutubeTrailerUrl() {
+        return ModelUtils.getYoutubeTrailerUrl(youtubeTrailer);
+    }
 
 }

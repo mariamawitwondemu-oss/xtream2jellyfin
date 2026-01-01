@@ -1,9 +1,14 @@
 package uk.humbkr.xtream2jellyfin.filemanager;
 
+import com.fasterxml.jackson.databind.type.MapType;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import uk.humbkr.xtream2jellyfin.common.JsonUtils;
 
+import java.io.FileNotFoundException;
+import java.io.IOError;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,9 +23,9 @@ import java.util.Set;
 @Slf4j
 public class CachedFileManager extends BaseFileManager implements FileManager {
 
-    private final String filesDbPath;
+    private final Path filesDbPath;
 
-    private Map<String, Map<String, String>> filesDb;
+    private Map<String, String> filesDb;
 
     private Set<String> trackedFiles;
 
@@ -29,26 +34,21 @@ public class CachedFileManager extends BaseFileManager implements FileManager {
 
     public CachedFileManager(String rootDir, @NonNull String cacheDir) {
         super(rootDir);
-        this.filesDbPath = cacheDir + "/files.json";
+        this.filesDbPath = initializeFilesDbPath(cacheDir);
         this.filesDb = new HashMap<>();
         this.trackedFiles = new HashSet<>();
         this.staleFiles = new HashSet<>();
     }
 
+    private static Path initializeFilesDbPath(String cacheDir) {
+        Path path = Paths.get(cacheDir + "/files.json");
+        FileManagerUtils.prepareDirectory(path.getParent().toString());
+        return path;
+    }
+
     @Override
     public void onProcessStart() {
-        // Load existing database
-        Object fileDb = FileManagerUtils.readFileContent(filesDbPath);
-        if (fileDb != null) {
-            try {
-                @SuppressWarnings("unchecked")
-                Map<String, Map<String, String>> db = (Map<String, Map<String, String>>) fileDb;
-                this.filesDb = db;
-            } catch (ClassCastException e) {
-                log.warn("Failed to cast files db, initializing empty db", e);
-                this.filesDb = new HashMap<>();
-            }
-        }
+        readFilesDb();
 
         // Initialize stale file tracking
         // Mark all previously known files as potentially stale
@@ -59,32 +59,31 @@ public class CachedFileManager extends BaseFileManager implements FileManager {
                 filesDb.size(), staleFiles.size());
     }
 
+    private void readFilesDb() {
+        try {
+            MapType mapType = JsonUtils.getJsonMapper().getTypeFactory().constructMapType(HashMap.class, String.class, String.class);
+            this.filesDb = JsonUtils.getJsonMapper().readValue(filesDbPath.toFile(), mapType);
+        } catch (ClassCastException e) {
+            log.warn("Failed to cast files db, initializing empty db", e);
+            this.filesDb = new HashMap<>();
+        } catch (FileNotFoundException e) {
+            log.info("files db does not exist");
+            this.filesDb = new HashMap<>();
+        } catch (IOException e) {
+            throw new IOError(e);
+        }
+    }
+
     @Override
     public void onProcessEnd() {
         // Clean up stale files first
         cleanupStaleFiles();
 
         // Update database to contain only files from current run
-        Map<String, Map<String, String>> updatedDb = new HashMap<>();
-        for (String trackedFile : trackedFiles) {
-            if (filesDb.containsKey(trackedFile)) {
-                updatedDb.put(trackedFile, filesDb.get(trackedFile));
-            }
-        }
-        this.filesDb = updatedDb;
+        updateFilesDb();
 
         // Save updated database
-        try {
-            Path path = Paths.get(filesDbPath);
-            FileManagerUtils.prepareDirectory(path.getParent().toString());
-
-            String json = objectMapper.writeValueAsString(filesDb);
-            Files.writeString(path, json, StandardCharsets.UTF_8);
-
-            log.debug("Saved {} files to cache database", filesDb.size());
-        } catch (IOException e) {
-            log.error("Failed to update database", e);
-        }
+        writeFilesDb();
 
         // Reset tracking sets for next run
         trackedFiles.clear();
@@ -92,8 +91,29 @@ public class CachedFileManager extends BaseFileManager implements FileManager {
         filesDb = new HashMap<>();
     }
 
+    private void updateFilesDb() {
+        Map<String, String> updatedDb = new HashMap<>();
+        for (String trackedFile : trackedFiles) {
+            if (filesDb.containsKey(trackedFile)) {
+                updatedDb.put(trackedFile, filesDb.get(trackedFile));
+            }
+        }
+        this.filesDb = updatedDb;
+    }
+
+    private void writeFilesDb() {
+        try {
+            try (OutputStream fos = Files.newOutputStream(filesDbPath)) {
+                objectMapper.writeValue(fos, filesDb);
+                log.debug("Saved {} files to cache database", filesDb.size());
+            }
+        } catch (IOException e) {
+            log.error("Failed to update cache database", e);
+        }
+    }
+
     @Override
-    public void save(String path, Object content, String date) {
+    public void save(String path, Object content) {
         // Mark file as active in current run
         trackedFiles.add(path);
         staleFiles.remove(path);
@@ -103,12 +123,11 @@ public class CachedFileManager extends BaseFileManager implements FileManager {
             byte[] contentBytes = contentStr.getBytes(StandardCharsets.UTF_8);
             String contentHash = md5Hash(contentBytes);
 
-            Map<String, String> fileHistory = filesDb.getOrDefault(path, new HashMap<>());
-            String itemHash = fileHistory.get("hash");
+            String itemHash = filesDb.get(path);
 
             if (!contentHash.equals(itemHash)) {
                 Path filePath = Paths.get(path);
-                FileManagerUtils.prepareDirectory(filePath.getParent().toString());
+                FileManagerUtils.prepareDirectory(Paths.get(path).getParent().toString());
 
                 String fileContent;
                 if (path.endsWith(".json")) {
@@ -121,13 +140,9 @@ public class CachedFileManager extends BaseFileManager implements FileManager {
                     }
                 }
 
-                log.debug("Writing file: {}", path);
+                log.trace("Writing file: {}", path);
                 Files.writeString(filePath, fileContent, StandardCharsets.UTF_8);
-
-                Map<String, String> metadata = new HashMap<>();
-                metadata.put("hash", contentHash);
-                metadata.put("added", date);
-                filesDb.put(path, metadata);
+                filesDb.put(path, contentHash);
             }
         } catch (IOException e) {
             log.error("Failed to save file: {}", path, e);

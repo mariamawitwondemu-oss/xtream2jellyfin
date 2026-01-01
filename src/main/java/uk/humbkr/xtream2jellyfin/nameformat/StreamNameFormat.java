@@ -1,7 +1,7 @@
 package uk.humbkr.xtream2jellyfin.nameformat;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.text.StringSubstitutor;
+import uk.humbkr.xtream2jellyfin.common.StringSubstitutor;
+import uk.humbkr.xtream2jellyfin.common.StringUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,11 +26,8 @@ public class StreamNameFormat extends BaseNameFormat {
         // Phase 2: Replace template placeholders
         streamName = applyTemplate(streamName, context);
 
-        // Phase 3: Apply Jellyfin character sanitization
-        streamName = sanitizeForJellyfin(streamName);
-
-        // Phase 4: Clean up empty brackets/parentheses and normalize whitespace
-        return cleanupEmptyMarkers(streamName);
+        // Phase 3: Apply character sanitization
+        return sanitize(streamName);
     }
 
     private String applyTemplate(String streamName, StreamNameFormatContext context) {
@@ -51,7 +48,7 @@ public class StreamNameFormat extends BaseNameFormat {
             putIfNotBlank(placeholderValues, "externalId", context.getExternalId());
         }
 
-        // Use StringSubstitutor to replace placeholders
+        // Use VariableSubstitutor to replace placeholders
         return new StringSubstitutor(placeholderValues).replace(template);
     }
 

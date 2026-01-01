@@ -8,8 +8,6 @@ public class Constants {
     // Configuration
     public static final String CONFIG_FILE = "config/config.yaml";
 
-    public static final String LOGBACK_CONFIG_FILE = "config/logback.xml";
-
     public static final int DEFAULT_SCAN_INTERVAL = 360; // 6 hours in minutes
 
 }

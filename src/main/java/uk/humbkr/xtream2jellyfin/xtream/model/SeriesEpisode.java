@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 @Data
-public class SerieEpisode {
+public class SeriesEpisode {
 
     private String id;
 
@@ -16,7 +16,7 @@ public class SerieEpisode {
     @JsonProperty("container_extension")
     private String containerExtension;
 
-    private EpisodeInfo info;
+    private SeriesEpisodeInfo info;
 
     @JsonProperty("custom_sid")
     private String customSid;

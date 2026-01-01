@@ -30,7 +30,7 @@ public class EpisodeNfo {
     private String plot;
 
     @JacksonXmlProperty(localName = "userrating")
-    private Double userrating;
+    private Double userRating;
 
     @JacksonXmlProperty(localName = "director")
     private String director;

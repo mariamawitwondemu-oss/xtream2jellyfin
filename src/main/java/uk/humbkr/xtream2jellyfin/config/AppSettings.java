@@ -6,9 +6,6 @@ import lombok.Data;
 @Data
 public class AppSettings {
 
-    @JsonProperty("run_once")
-    private boolean runOnce = false;
-
     @JsonProperty("file_manager_type")
     private String fileManagerType = "simple";
 
@@ -18,10 +15,10 @@ public class AppSettings {
     @JsonProperty("cache_dir")
     private String cacheDir = "cache";
 
-    @JsonProperty("write_metadata_json")
-    private boolean writeMetadataJson = false;
-
     @JsonProperty("write_metadata_nfo")
     private boolean writeMetadataNfo = true;
+
+    @JsonProperty("logging")
+    private LoggingConfig logging = new LoggingConfig();
 
 }

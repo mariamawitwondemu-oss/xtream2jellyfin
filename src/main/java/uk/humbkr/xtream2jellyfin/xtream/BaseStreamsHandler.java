@@ -2,32 +2,31 @@ package uk.humbkr.xtream2jellyfin.xtream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import uk.humbkr.xtream2jellyfin.common.JsonUtils;
 import uk.humbkr.xtream2jellyfin.common.RegexUtils;
+import uk.humbkr.xtream2jellyfin.common.StringUtils;
 import uk.humbkr.xtream2jellyfin.config.AppSettings;
 import uk.humbkr.xtream2jellyfin.config.MediaSettings;
 import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
 import uk.humbkr.xtream2jellyfin.filemanager.FileManager;
+import uk.humbkr.xtream2jellyfin.http.ConfigurableHttpClient;
 import uk.humbkr.xtream2jellyfin.nameformat.CategoryNameFormat;
 import uk.humbkr.xtream2jellyfin.nameformat.StreamNameFormat;
 import uk.humbkr.xtream2jellyfin.xtream.model.*;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.*;
 
 public abstract class BaseStreamsHandler {
 
     protected final ObjectMapper objectMapper;
 
-    protected final HttpClient httpClient;
+    protected final ConfigurableHttpClient httpClient;
 
     protected final FileManager fileManager;
 
@@ -46,8 +45,6 @@ public abstract class BaseStreamsHandler {
     protected final List<String> excludeCategoryIds;
 
     protected final boolean categoryFolder;
-
-    protected final boolean writeMetadataJson;
 
     protected final boolean writeMetadataNfo;
 
@@ -80,16 +77,13 @@ public abstract class BaseStreamsHandler {
     protected long processingStartTime = 0;
 
     public BaseStreamsHandler(XtreamProviderConfig providerConfig, FileManager fileManager,
-                              AppSettings appSettings, Logger log) {
+                              AppSettings appSettings, ConfigurableHttpClient httpClient, Logger log) {
         this.log = log;
         this.objectMapper = JsonUtils.getJsonMapper();
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(30))
-                .build();
+        this.httpClient = httpClient;
 
         this.fileManager = fileManager;
         this.providerName = Objects.requireNonNull(providerConfig.getName());
-        this.writeMetadataJson = appSettings.isWriteMetadataJson();
         this.writeMetadataNfo = appSettings.isWriteMetadataNfo();
 
         this.username = providerConfig.getUsername();
@@ -131,7 +125,7 @@ public abstract class BaseStreamsHandler {
 
     public abstract MediaType getMediaType();
 
-    protected void processItem(Object item) throws Exception {
+    protected void processItem(Object item) {
         // To be overridden by subclasses
     }
 
@@ -175,12 +169,6 @@ public abstract class BaseStreamsHandler {
             logError("Failed to process: " + ex.getMessage(), ex);
         }
     }
-
-//    protected Collection<Object> getAllStreams() {
-//        return List.of();
-//    }
-//
-//    protected abstract <T> Class<T> getStreamItemClass();
 
     protected void processStreams() {
 
@@ -370,124 +358,93 @@ public abstract class BaseStreamsHandler {
     }
 
     public Object getData(Endpoint endpoint, Action action, String contextId) {
-        Object result = null;
-
-        String url = buildUrl(endpoint, action, contextId);
-
-        log.debug("Fetching data from URL: {}", url);
-
-        for (int attempt = 0; attempt < 3; attempt++) {
-            try {
-                HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                        .uri(URI.create(url))
-                        .timeout(Duration.ofSeconds(30))
-                        .GET();
-
-                for (Map.Entry<String, String> header : Constants.HEADERS.entrySet()) {
-                    requestBuilder.header(header.getKey(), header.getValue());
-                }
-
-                HttpResponse<String> response = httpClient.send(
-                        requestBuilder.build(),
-                        HttpResponse.BodyHandlers.ofString()
-                );
-
-                if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                    String responseBody = response.body();
-
-                    if (endpoint.isJson()) {
-                        if (action.getCollectionType() != null) {
-                            CollectionType collectionType = objectMapper.getTypeFactory().constructCollectionType(action.getCollectionType(), action.getValueType());
-                            result = objectMapper.readValue(responseBody, collectionType);
-                        } else {
-                            result = objectMapper.readValue(responseBody, action.getValueType());
-                        }
-                    } else {
-                        result = action.getValueType().cast(responseBody);
-                    }
-                    break;
-                }
-
-                Thread.sleep(1000);
-            } catch (IOException | InterruptedException e) {
-                if (e instanceof InterruptedException) {
-                    Thread.currentThread().interrupt();
-                }
-                logError("Attempt " + (attempt + 1) + " failed: " + e.getMessage(), e);
-            }
-        }
-
-        if (result != null) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
-
-        return result;
-    }
-
-    protected <T> T getData(Endpoint endpoint, Action action, String contextId, Class<T> clazz) {
-        T result = null;
-
         String url = buildUrl(endpoint, action, contextId);
 
         logDebug("Fetching data from URL: " + url);
 
-        for (int attempt = 0; attempt < 3; attempt++) {
-            try {
-                HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                        .uri(URI.create(url))
-                        .timeout(Duration.ofSeconds(30))
-                        .GET();
+        try {
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(Duration.ofSeconds(30))
+                    .GET();
 
-                for (Map.Entry<String, String> header : Constants.HEADERS.entrySet()) {
-                    requestBuilder.header(header.getKey(), header.getValue());
-                }
-
-                HttpResponse<String> response = httpClient.send(
-                        requestBuilder.build(),
-                        HttpResponse.BodyHandlers.ofString()
-                );
-
-                if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                    String responseBody = response.body();
-
-                    if (endpoint.isJson()) {
-                        result = objectMapper.readValue(responseBody, clazz);
-                    } else {
-                        result = clazz.cast(responseBody);
-                    }
-                    break;
-                }
-
-                Thread.sleep(1000);
-            } catch (IOException | InterruptedException e) {
-                if (e instanceof InterruptedException) {
-                    Thread.currentThread().interrupt();
-                }
-                logError("Attempt " + (attempt + 1) + " failed: " + e.getMessage(), e);
+            for (Map.Entry<String, String> header : Constants.HEADERS.entrySet()) {
+                requestBuilder.header(header.getKey(), header.getValue());
             }
-        }
 
-        if (result != null) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
+            HttpResponse<String> response = httpClient.send(
+                    requestBuilder.build(),
+                    HttpResponse.BodyHandlers.ofString()
+            );
+
+            String responseBody = response.body();
+
+            if (endpoint.isJson()) {
+                if (action.getCollectionType() != null) {
+                    CollectionType collectionType = objectMapper.getTypeFactory()
+                            .constructCollectionType(action.getCollectionType(), action.getValueType());
+                    return objectMapper.readValue(responseBody, collectionType);
+                } else {
+                    return objectMapper.readValue(responseBody, action.getValueType());
+                }
+            } else {
+                return action.getValueType().cast(responseBody);
+            }
+
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
+            logError("Request failed: " + e.getMessage(), e);
+            return null;
         }
+    }
 
-        return result;
+    protected <T> T getData(Endpoint endpoint, Action action, String contextId, Class<T> clazz) {
+        String url = buildUrl(endpoint, action, contextId);
+
+        logDebug("Fetching data from URL: " + url);
+
+        String responseBody = null;
+        try {
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(Duration.ofSeconds(30))
+                    .GET();
+
+            for (Map.Entry<String, String> header : Constants.HEADERS.entrySet()) {
+                requestBuilder.header(header.getKey(), header.getValue());
+            }
+
+            HttpResponse<String> response = httpClient.send(
+                    requestBuilder.build(),
+                    HttpResponse.BodyHandlers.ofString()
+            );
+
+            responseBody = response.body();
+
+            if (endpoint.isJson()) {
+                return objectMapper.readValue(responseBody, clazz);
+            } else {
+                return clazz.cast(responseBody);
+            }
+
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            logError("Request failed: " + e.getMessage(), e);
+            logInfo("Response body: " + responseBody);
+            return null;
+        }
     }
 
     protected String buildStreamUrl(String streamId, String ext) {
         return providerUrl + "/" + getMediaType() + "/" + username + "/" + password + "/" + streamId + "." + ext;
     }
 
-    protected void addFile(String filePath, Object content, Instant date) {
-        fileManager.save(filePath, content, date.toString());
+    protected void addFile(String filePath, Object content) {
+        fileManager.save(filePath, content);
     }
 
     protected void resetCounters(int streams) {
@@ -534,114 +491,6 @@ public abstract class BaseStreamsHandler {
     private String capitalize(String str) {
         if (str == null || str.isEmpty()) return str;
         return str.substring(0, 1).toUpperCase() + str.substring(1);
-    }
-
-    protected String extractYear(Map<String, Object> streamData) {
-        if (streamData == null) {
-            return null;
-        }
-
-        // Try multiple field names
-        String[] yearFields = {"year", "releaseDate", "release_year", "release_date"};
-
-        for (String field : yearFields) {
-            Object value = streamData.get(field);
-            if (value != null) {
-                String yearStr = value.toString();
-                // Extract year from date strings like "2024-12-18" or just "2024"
-                if (RegexUtils.matches(yearStr, "\\d{4}.*")) {
-                    return yearStr.substring(0, 4);
-                }
-            }
-        }
-
-        return null;
-    }
-
-    protected String extractTmdbId(Map<String, Object> streamData) {
-        if (streamData == null) {
-            return null;
-        }
-
-        // Try multiple field names
-        String[] tmdbFields = {"tmdb_id", "tmdb", "tmdbId", "movie_data.tmdb_id", "info.tmdb_id"};
-
-        for (String field : tmdbFields) {
-            Object value = getNestedValue(streamData, field);
-            if (value != null) {
-                return value.toString();
-            }
-        }
-
-        return null;
-    }
-
-    protected String extractImdbId(Map<String, Object> streamData) {
-        if (streamData == null) {
-            return null;
-        }
-
-        // Try multiple field names
-        String[] imdbFields = {"imdb_id", "imdb", "imdbId", "movie_data.imdb_id", "info.imdb_id"};
-
-        for (String field : imdbFields) {
-            Object value = getNestedValue(streamData, field);
-            if (value != null) {
-                String imdbStr = value.toString();
-                // Ensure IMDB ID format (tt followed by numbers)
-                if (RegexUtils.matches(imdbStr, "tt\\d+")) {
-                    return imdbStr;
-                }
-                // If it's just numbers, prepend "tt"
-                if (RegexUtils.matches(imdbStr, "\\d+")) {
-                    return "tt" + imdbStr;
-                }
-                return imdbStr;
-            }
-        }
-
-        return null;
-    }
-
-    protected String extractTvdbId(Map<String, Object> streamData) {
-        if (streamData == null) {
-            return null;
-        }
-
-        // Try multiple field names
-        String[] tvdbFields = {"tvdb_id", "tvdb", "tvdbId", "series_data.tvdb_id", "info.tvdb_id"};
-
-        for (String field : tvdbFields) {
-            Object value = getNestedValue(streamData, field);
-            if (value != null) {
-                return value.toString();
-            }
-        }
-
-        return null;
-    }
-
-    @SuppressWarnings("unchecked")
-    private Object getNestedValue(Map<String, Object> map, String key) {
-        if (key.contains(".")) {
-            String[] parts = RegexUtils.split(key, "\\.");
-            Object current = map;
-
-            for (String part : parts) {
-                if (current instanceof Map) {
-                    current = ((Map<String, Object>) current).get(part);
-                    if (current == null) {
-                        return null;
-                    }
-                } else {
-                    return null;
-                }
-            }
-
-            return current;
-        } else {
-            return map.get(key);
-        }
     }
 
 }

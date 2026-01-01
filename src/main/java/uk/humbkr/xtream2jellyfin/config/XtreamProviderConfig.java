@@ -11,6 +11,8 @@ import java.util.Map;
 @Data
 public class XtreamProviderConfig {
 
+    private boolean enabled;
+
     @JsonIgnore
     private String name;
 
@@ -20,13 +22,14 @@ public class XtreamProviderConfig {
 
     private String password;
 
-    private int scanInterval = Constants.DEFAULT_SCAN_INTERVAL;
+    @JsonProperty("scan_interval_minutes")
+    private int scanIntervalMinutes = Constants.DEFAULT_SCAN_INTERVAL;
 
     @JsonProperty("category_name_cleanup_patterns")
     private Map<String, String> categoryNameCleanupPatterns = new HashMap<>();
 
-    @JsonProperty("write_metadata_json")
-    private boolean writeMetadataJson = false;
+    @JsonProperty("http_client")
+    private HttpClientConfig httpClientConfig = new HttpClientConfig();
 
     private JellyfinServer libraryRefresh;
 

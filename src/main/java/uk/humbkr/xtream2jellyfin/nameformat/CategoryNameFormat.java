@@ -1,6 +1,6 @@
 package uk.humbkr.xtream2jellyfin.nameformat;
 
-import org.apache.commons.lang3.StringUtils;
+import uk.humbkr.xtream2jellyfin.common.StringUtils;
 
 import java.util.Map;
 
@@ -16,13 +16,10 @@ public class CategoryNameFormat extends BaseNameFormat {
         }
 
         // Phase 1: Apply user-configured regex patterns
-        String result = applyRegexPatterns(categoryName);
+        categoryName = applyRegexPatterns(categoryName);
 
         // Phase 2: Apply Jellyfin character sanitization
-        result = sanitizeForJellyfin(result);
-
-        // Phase 3: Clean up empty brackets/parentheses and normalize whitespace
-        return cleanupEmptyMarkers(result);
+        return sanitize(categoryName);
     }
 
 }

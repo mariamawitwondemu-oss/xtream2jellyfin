@@ -21,7 +21,7 @@ public class MovieNfo {
     private String title;
 
     @JacksonXmlProperty(localName = "originaltitle")
-    private String originaltitle;
+    private String originalTitle;
 
     @JacksonXmlProperty(localName = "plot")
     private String plot;
@@ -33,11 +33,11 @@ public class MovieNfo {
     private String year;
 
     @JacksonXmlProperty(localName = "userrating")
-    private Double userrating;
+    private Double userRating;
 
     @JacksonXmlProperty(localName = "uniqueid")
     @JacksonXmlElementWrapper(useWrapping = false)
-    private List<UniqueId> uniqueids;
+    private List<UniqueId> uniqueIds;
 
     @JacksonXmlProperty(localName = "genre")
     @JacksonXmlElementWrapper(useWrapping = false)
@@ -54,19 +54,42 @@ public class MovieNfo {
     @JacksonXmlProperty(localName = "runtime")
     private Integer runtime;
 
+    @JacksonXmlProperty(localName = "trailer")
+    private String trailer;
+
+    @JacksonXmlProperty(localName = "thumb")
+    @JacksonXmlElementWrapper(useWrapping = false)
+    private List<Thumb> thumbs;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Thumb {
+
+        @JacksonXmlProperty(isAttribute = true, localName = "aspect")
+        private String aspect;
+
+        @JacksonXmlProperty
+        private String url;
+
+    }
+
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class UniqueId {
+
         @JacksonXmlProperty(isAttribute = true, localName = "type")
         private String type;
 
         @JacksonXmlProperty(isAttribute = true, localName = "default")
         private Boolean isDefault;
 
-        @JacksonXmlProperty(localName = "")
+        @JacksonXmlProperty
         private String value;
+
     }
 
     @Data
@@ -74,7 +97,10 @@ public class MovieNfo {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Actor {
+
         @JacksonXmlProperty(localName = "name")
         private String name;
+
     }
+
 }

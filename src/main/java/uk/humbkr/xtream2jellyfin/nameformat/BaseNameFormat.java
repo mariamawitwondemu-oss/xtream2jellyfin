@@ -6,7 +6,7 @@ import java.util.Map;
 
 abstract class BaseNameFormat {
 
-    private static final Map<String, String> JELLYFIN_PROHIBITED_CHARS = Map.ofEntries(
+    private static final Map<String, String> PROHIBITED_CHARS = Map.ofEntries(
             Map.entry("<", ""),
             Map.entry(">", ""),
             Map.entry(":", ""),
@@ -38,17 +38,16 @@ abstract class BaseNameFormat {
         return result.trim();
     }
 
-    protected String sanitizeForJellyfin(String text) {
-        String result = text;
-        for (Map.Entry<String, String> entry : JELLYFIN_PROHIBITED_CHARS.entrySet()) {
-            if (result.contains(entry.getKey())) {
-                result = result.replace(entry.getKey(), entry.getValue());
+    protected String sanitize(String text) {
+        for (Map.Entry<String, String> entry : PROHIBITED_CHARS.entrySet()) {
+            if (text.contains(entry.getKey())) {
+                text = text.replace(entry.getKey(), entry.getValue());
             }
         }
-        return result;
+        return this.cleanupEmptyMarkers(text);
     }
 
-    protected String cleanupEmptyMarkers(String text) {
+    private String cleanupEmptyMarkers(String text) {
         // Remove empty brackets: [], ()
         String result = text;
 

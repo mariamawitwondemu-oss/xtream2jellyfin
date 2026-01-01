@@ -4,10 +4,10 @@ import lombok.extern.slf4j.Slf4j;
 import uk.humbkr.xtream2jellyfin.config.AppSettings;
 import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
 import uk.humbkr.xtream2jellyfin.filemanager.FileManager;
+import uk.humbkr.xtream2jellyfin.http.ConfigurableHttpClient;
 import uk.humbkr.xtream2jellyfin.xtream.model.Endpoint;
 import uk.humbkr.xtream2jellyfin.xtream.model.MediaType;
 
-import java.time.Instant;
 import java.util.*;
 
 @Slf4j
@@ -15,8 +15,9 @@ public class LiveStreamsHandler extends BaseStreamsHandler {
 
     private String epgData;
 
-    public LiveStreamsHandler(XtreamProviderConfig providerConfig, FileManager fileManager, AppSettings appSettings) {
-        super(providerConfig, fileManager, appSettings, log);
+    public LiveStreamsHandler(XtreamProviderConfig providerConfig, FileManager fileManager,
+                              AppSettings appSettings, ConfigurableHttpClient httpClient) {
+        super(providerConfig, fileManager, appSettings, httpClient, log);
     }
 
     @Override
@@ -48,10 +49,8 @@ public class LiveStreamsHandler extends BaseStreamsHandler {
 
             String m3uContent = String.join("\r\n", liveStreamsData);
 
-            Instant date = Instant.now();
-
-            addFile(mediaDir + "/live.m3u", m3uContent, date);
-            addFile(mediaDir + "/epg.xml", epgData, date);
+            addFile(mediaDir + "/live.m3u", m3uContent);
+            addFile(mediaDir + "/epg.xml", epgData);
 
             long executionTime = System.currentTimeMillis() - startTime;
 

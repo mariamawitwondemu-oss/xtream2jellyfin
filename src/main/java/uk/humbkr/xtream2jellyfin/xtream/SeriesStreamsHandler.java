@@ -1,15 +1,15 @@
 package uk.humbkr.xtream2jellyfin.xtream;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
+import uk.humbkr.xtream2jellyfin.common.StringUtils;
 import uk.humbkr.xtream2jellyfin.config.AppSettings;
 import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
 import uk.humbkr.xtream2jellyfin.filemanager.FileManager;
+import uk.humbkr.xtream2jellyfin.http.ConfigurableHttpClient;
 import uk.humbkr.xtream2jellyfin.metadata.NfoGenerator;
 import uk.humbkr.xtream2jellyfin.nameformat.StreamNameFormatContext;
 import uk.humbkr.xtream2jellyfin.xtream.model.*;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -17,8 +17,9 @@ import java.util.Map;
 @Slf4j
 public class SeriesStreamsHandler extends BaseStreamsHandler {
 
-    public SeriesStreamsHandler(XtreamProviderConfig providerConfig, FileManager fileManager, AppSettings appSettings) {
-        super(providerConfig, fileManager, appSettings, log);
+    public SeriesStreamsHandler(XtreamProviderConfig providerConfig, FileManager fileManager,
+                                AppSettings appSettings, ConfigurableHttpClient httpClient) {
+        super(providerConfig, fileManager, appSettings, httpClient, log);
     }
 
     @Override
@@ -28,12 +29,12 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
 
     @Override
     protected void processItem(Object item) {
-        processSeriesStream((SerieItem) item);
+        processSeriesStream((SeriesItem) item);
     }
 
-    private String getStreamInfoPath(SerieItem serieItem, SerieInfo info) {
-        String seriesName = serieItem.getName();
-        String categoryId = String.valueOf(serieItem.getCategoryId());
+    private String getSeriesBasePath(SeriesItem seriesItem, SeriesInfo info) {
+        String seriesName = seriesItem.getName();
+        String categoryId = String.valueOf(seriesItem.getCategoryId());
 
         String seriesCategory = categories.get(categoryId);
 
@@ -53,7 +54,7 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
         }
 
         StreamNameFormatContext context = StreamNameFormatContext.builder()
-                .year(serieItem.getReleaseDate() != null ? extractYearFromDate(serieItem.getReleaseDate()) : null)
+                .year(seriesItem.getReleaseDate() != null ? extractYearFromDate(seriesItem.getReleaseDate()) : null)
                 .externalProviderId(externalProviderId)
                 .externalId(externalId)
                 .build();
@@ -72,50 +73,40 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
         }
 
         basePathParts.add(seriesNameClean);
-        String basePath = String.join("/", basePathParts);
 
-        return basePath + "/" + seriesNameClean + ".json";
+        return String.join("/", basePathParts) + "/" + seriesNameClean;
     }
 
-    private void processSeriesStream(SerieItem serieItem) {
+    private void processSeriesStream(SeriesItem seriesItem) {
         try {
-            String seriesId = String.valueOf(serieItem.getSeriesId());
+            String seriesId = String.valueOf(seriesItem.getSeriesId());
 
             logDebug("Updating stream for #" + seriesId);
 
-            SerieDetails details = getData(Endpoint.PLAYER, Action.SERIES_INFO, seriesId, SerieDetails.class);
+            SeriesDetails details = getData(Endpoint.PLAYER, Action.SERIES_INFO, seriesId, SeriesDetails.class);
 
             if (details != null) {
-                SerieInfo info = details.getInfo();
+                SeriesInfo info = details.getInfo();
 
                 long addedTimestamp = Long.parseLong(info.getLastModified());
-                Instant date = Instant.ofEpochSecond(addedTimestamp);
-
-                String streamInfoPath = getStreamInfoPath(serieItem, info);
-
-                logDebug("processing series stream: " + streamInfoPath);
-
-                if (writeMetadataJson) {
-                    addFile(streamInfoPath, details, date);
-                }
 
                 // Generate and write tvshow.nfo
-                String basePath = StringUtils.substringBeforeLast(streamInfoPath, "/");
+                String basePath = getSeriesBasePath(seriesItem, info);
                 if (writeMetadataNfo) {
                     String nfoPath = basePath + "/tvshow.nfo";
-                    String nfoContent = NfoGenerator.generateTvShowNfo(serieItem, info);
+                    String nfoContent = NfoGenerator.generateTvShowNfo(seriesItem, info);
                     if (nfoContent != null) {
-                        addFile(nfoPath, nfoContent, date);
+                        addFile(nfoPath, nfoContent);
                     }
                 }
 
-                Map<String, List<SerieEpisode>> episodesData = details.getEpisodes();
+                Map<String, List<SeriesEpisode>> episodesData = details.getEpisodes();
 
                 if (episodesData != null) {
-                    for (Map.Entry<String, List<SerieEpisode>> seasonEntry : episodesData.entrySet()) {
-                        List<SerieEpisode> seasonData = seasonEntry.getValue();
+                    for (Map.Entry<String, List<SeriesEpisode>> seasonEntry : episodesData.entrySet()) {
+                        List<SeriesEpisode> seasonData = seasonEntry.getValue();
 
-                        for (SerieEpisode episode : seasonData) {
+                        for (SeriesEpisode episode : seasonData) {
                             processEpisode(basePath, episode);
                         }
                     }
@@ -123,11 +114,11 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
             }
 
         } catch (Exception ex) {
-            logError("Failed to process stream, Series: " + serieItem.getName() + ", Error: " + ex.getMessage(), ex);
+            logError("Failed to process stream, Series: " + seriesItem.getName() + ", Error: " + ex.getMessage(), ex);
         }
     }
 
-    private void processEpisode(String basePath, SerieEpisode episode) {
+    private void processEpisode(String basePath, SeriesEpisode episode) {
         String seriesName = StringUtils.substringAfterLast(basePath, "/");
 
         try {
@@ -135,8 +126,6 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
             int episodeNumber = episode.getEpisodeNum();
             int seasonNumber = episode.getSeason();
             String containerExtension = episode.getContainerExtension();
-
-            long addedTimestamp = Long.parseLong(episode.getAdded());
 
             String seasonPad = String.format("%02d", seasonNumber);
             String episodeShort = String.format("%02d", episodeNumber);
@@ -149,16 +138,14 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
 
             String episodeStreamUrl = buildStreamUrl(streamId, containerExtension);
 
-            Instant date = Instant.ofEpochSecond(addedTimestamp);
-
-            addFile(episodeFilePath, episodeStreamUrl, date);
+            addFile(episodeFilePath, episodeStreamUrl);
 
             // Generate and write episode NFO
             if (writeMetadataNfo) {
                 String episodeNfoPath = basePath + "/" + seasonDir + "/" + episodeFile + ".nfo";
                 String episodeNfoContent = NfoGenerator.generateEpisodeNfo(episode);
                 if (episodeNfoContent != null) {
-                    addFile(episodeNfoPath, episodeNfoContent, date);
+                    addFile(episodeNfoPath, episodeNfoContent);
                 }
             }
 
