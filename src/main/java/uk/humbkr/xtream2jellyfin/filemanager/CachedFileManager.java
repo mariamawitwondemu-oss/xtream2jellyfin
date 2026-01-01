@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 @Slf4j
 public class CachedFileManager extends BaseFileManager implements FileManager {
@@ -127,7 +128,7 @@ public class CachedFileManager extends BaseFileManager implements FileManager {
 
             if (!contentHash.equals(itemHash)) {
                 Path filePath = Paths.get(path);
-                FileManagerUtils.prepareDirectory(Paths.get(path).getParent().toString());
+                FileManagerUtils.prepareDirectory(filePath.getParent().toString());
 
                 String fileContent;
                 if (path.endsWith(".json")) {
@@ -151,6 +152,7 @@ public class CachedFileManager extends BaseFileManager implements FileManager {
 
     private void cleanupStaleFiles() {
         if (staleFiles.isEmpty()) {
+            log.info("No stale files to clean up");
             return;
         }
 
@@ -195,11 +197,12 @@ public class CachedFileManager extends BaseFileManager implements FileManager {
 
             // Walk the directory tree and collect directories in reverse depth order
             // This ensures we process child directories before parent directories
-            Files.walk(rootPath)
+            try (Stream<Path> paths = Files.walk(rootPath)
                     .filter(Files::isDirectory)
                     .filter(path -> !path.equals(rootPath)) // Don't delete the root directory
-                    .sorted((p1, p2) -> Integer.compare(p2.getNameCount(), p1.getNameCount()))
-                    .forEach(this::deleteIfEmpty);
+                    .sorted((p1, p2) -> Integer.compare(p2.getNameCount(), p1.getNameCount()))) {
+                paths.forEach(this::deleteIfEmpty);
+            }
 
         } catch (IOException e) {
             log.warn("Failed to cleanup empty directories", e);

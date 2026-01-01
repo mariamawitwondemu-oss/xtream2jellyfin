@@ -57,7 +57,7 @@ public class MoviesStreamsHandler extends BaseStreamsHandler {
 
         movieFolder.add(movieName);
 
-        String moviePath = String.join("/", movieFolder);
+        String moviePath = String.join("/", movieFolder) + "/" + movieName;
 
         String streamFile = moviePath + ".strm";
         String streamUrl = buildStreamUrl(movieId, containerExtension);

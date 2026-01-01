@@ -69,12 +69,10 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
             if (details != null) {
                 SeriesInfo info = details.getInfo();
 
-                long addedTimestamp = Long.parseLong(info.getLastModified());
-
                 // Generate and write tvshow.nfo
-                String basePath = getSeriesFolderPath(seriesItem, info);
+                String seriesFolderPath = getSeriesFolderPath(seriesItem, info);
                 if (writeMetadataNfo) {
-                    String nfoPath = basePath + "/tvshow.nfo";
+                    String nfoPath = seriesFolderPath + "/tvshow.nfo";
                     String nfoContent = NfoGenerator.generateTvShowNfo(seriesItem, info);
                     if (nfoContent != null) {
                         addFile(nfoPath, nfoContent);
@@ -88,7 +86,7 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
                         List<SeriesEpisode> seasonData = seasonEntry.getValue();
 
                         for (SeriesEpisode episode : seasonData) {
-                            processEpisode(basePath, episode);
+                            processEpisode(seriesFolderPath, episode);
                         }
                     }
                 }
@@ -99,8 +97,8 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
         }
     }
 
-    private void processEpisode(String basePath, SeriesEpisode episode) {
-        String seriesName = StringUtils.substringAfterLast(basePath, "/");
+    private void processEpisode(String seriesFolderPath, SeriesEpisode episode) {
+        String seriesName = StringUtils.substringAfterLast(seriesFolderPath, "/");
 
         try {
             String streamId = episode.getId();
@@ -115,7 +113,7 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
 
             String seasonDir = "Season " + seasonPad;
 
-            String episodeFilePath = basePath + "/" + seasonDir + "/" + episodeFile + ".strm";
+            String episodeFilePath = seriesFolderPath + "/" + seasonDir + "/" + episodeFile + ".strm";
 
             String episodeStreamUrl = buildStreamUrl(streamId, containerExtension);
 
@@ -123,7 +121,7 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
 
             // Generate and write episode NFO
             if (writeMetadataNfo) {
-                String episodeNfoPath = basePath + "/" + seasonDir + "/" + episodeFile + ".nfo";
+                String episodeNfoPath = seriesFolderPath + "/" + seasonDir + "/" + episodeFile + ".nfo";
                 String episodeNfoContent = NfoGenerator.generateEpisodeNfo(episode);
                 if (episodeNfoContent != null) {
                     addFile(episodeNfoPath, episodeNfoContent);

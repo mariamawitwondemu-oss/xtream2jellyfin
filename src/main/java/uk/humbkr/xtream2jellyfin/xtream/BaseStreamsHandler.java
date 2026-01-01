@@ -64,11 +64,9 @@ public abstract class BaseStreamsHandler {
 
     protected Map<String, String> categories;
 
-    protected int processNumber = 0;
-
     protected int streamsCount = 0;
 
-    protected int processedCount = 0;
+    protected int streamProcessed = 0;
 
     protected int streamsSkipped = 0;
 
@@ -145,7 +143,6 @@ public abstract class BaseStreamsHandler {
 
     public void process() {
         try {
-            processNumber++;
             processingStartTime = System.currentTimeMillis();
 
             loadData();
@@ -161,7 +158,7 @@ public abstract class BaseStreamsHandler {
             categories.clear();
 
             logInfo(String.format("Complete processing, Total: %d, Processed: %d, Skipped: %d, Duration: %.3f seconds",
-                    streamsCount, processedCount, streamsSkipped, executionTime / 1000.0));
+                    streamsCount, streamProcessed, streamsSkipped, executionTime / 1000.0));
 
         } catch (Exception ex) {
             logError("Failed to process: " + ex.getMessage(), ex);
@@ -198,6 +195,10 @@ public abstract class BaseStreamsHandler {
                 updateCounters();
             }
             streamsIterator.remove();
+            if (streamProcessed == 100) {
+                log.debug("Processed 100 streams, skipping");
+                break;
+            }
         }
 
         // Clear the entire list to release all references
@@ -447,23 +448,23 @@ public abstract class BaseStreamsHandler {
 
     protected void resetCounters(int streams) {
         this.streamsCount = streams;
-        this.processedCount = 0;
+        this.streamProcessed = 0;
         this.streamsSkipped = 0;
     }
 
     protected void updateCounters() {
         long executionTime = System.currentTimeMillis() - processingStartTime;
 
-        processedCount++;
+        streamProcessed++;
 
-        int totalHandled = processedCount + streamsSkipped;
+        int totalHandled = streamProcessed + streamsSkipped;
         double progress = (double) totalHandled / streamsCount;
         double progressLeftRatio = 1.0 / progress;
         double expectedDuration = progressLeftRatio * executionTime;
         double timeLeft = expectedDuration - executionTime;
 
         logInfo(String.format("Progress: %d / %d (%.1f%%), Processed: %d, Skipped: %d, Estimated time left: %.2f seconds",
-                totalHandled, streamsCount, progress * 100, processedCount, streamsSkipped, timeLeft / 1000.0));
+                totalHandled, streamsCount, progress * 100, streamProcessed, streamsSkipped, timeLeft / 1000.0));
     }
 
     protected void logError(String message, Exception ex) {
