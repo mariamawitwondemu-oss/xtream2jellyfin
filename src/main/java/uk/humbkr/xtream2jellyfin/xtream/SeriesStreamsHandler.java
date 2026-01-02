@@ -80,10 +80,35 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
                 }
 
                 Map<String, List<SeriesEpisode>> episodesData = details.getEpisodes();
+                List<SeriesSeason> seasons = details.getSeasons();
 
                 if (episodesData != null) {
                     for (Map.Entry<String, List<SeriesEpisode>> seasonEntry : episodesData.entrySet()) {
+                        String seasonKey = seasonEntry.getKey();
                         List<SeriesEpisode> seasonData = seasonEntry.getValue();
+
+                        // Generate and write season.nfo
+                        if (writeMetadataNfo && seasons != null) {
+                            try {
+                                int seasonNumber = Integer.parseInt(seasonKey);
+                                SeriesSeason season = seasons.stream()
+                                        .filter(s -> s.getSeasonNumber() != null && s.getSeasonNumber() == seasonNumber)
+                                        .findFirst()
+                                        .orElse(null);
+
+                                if (season != null) {
+                                    String seasonPad = String.format("%02d", seasonNumber);
+                                    String seasonDir = "Season " + seasonPad;
+                                    String seasonNfoPath = seriesFolderPath + "/" + seasonDir + "/season.nfo";
+                                    String seasonNfoContent = NfoGenerator.generateSeasonNfo(season, info.getTmdb());
+                                    if (seasonNfoContent != null) {
+                                        addFile(seasonNfoPath, seasonNfoContent);
+                                    }
+                                }
+                            } catch (NumberFormatException e) {
+                                logDebug("Could not parse season number from key: " + seasonKey);
+                            }
+                        }
 
                         for (SeriesEpisode episode : seasonData) {
                             processEpisode(seriesFolderPath, episode);

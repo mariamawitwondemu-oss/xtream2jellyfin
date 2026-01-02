@@ -15,8 +15,8 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@JacksonXmlRootElement(localName = "tvshow")
-public class TvShowNfo {
+@JacksonXmlRootElement(localName = "season")
+public class SeasonNfo {
 
     @JacksonXmlProperty(localName = "title")
     private String title;
@@ -24,8 +24,14 @@ public class TvShowNfo {
     @JacksonXmlProperty(localName = "plot")
     private String plot;
 
+    @JacksonXmlProperty(localName = "seasonnumber")
+    private Integer seasonNumber;
+
     @JacksonXmlProperty(localName = "premiered")
     private String premiered;
+
+    @JacksonXmlProperty(localName = "year")
+    private Integer year;
 
     @JacksonXmlProperty(localName = "userrating")
     private Double userRating;
@@ -33,24 +39,6 @@ public class TvShowNfo {
     @JacksonXmlProperty(localName = "uniqueid")
     @JacksonXmlElementWrapper(useWrapping = false)
     private List<UniqueId> uniqueIds;
-
-    @JacksonXmlProperty(localName = "genre")
-    @JacksonXmlElementWrapper(useWrapping = false)
-    private List<String> genres;
-
-    @JacksonXmlProperty(localName = "actor")
-    @JacksonXmlElementWrapper(useWrapping = false)
-    private List<Actor> actors;
-
-    @JacksonXmlProperty(localName = "director")
-    @JacksonXmlElementWrapper(useWrapping = false)
-    private List<String> directors;
-
-    @JacksonXmlProperty(localName = "runtime")
-    private Integer runtime;
-
-    @JacksonXmlProperty(localName = "trailer")
-    private String trailer;
 
     @JacksonXmlProperty(localName = "thumb")
     @JacksonXmlElementWrapper(useWrapping = false)
@@ -86,16 +74,4 @@ public class TvShowNfo {
         private String value;
 
     }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class Actor {
-
-        @JacksonXmlProperty(localName = "name")
-        private String name;
-
-    }
-
 }

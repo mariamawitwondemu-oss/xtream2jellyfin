@@ -8,6 +8,7 @@ import uk.humbkr.xtream2jellyfin.common.StringUtils;
 import uk.humbkr.xtream2jellyfin.common.XmlUtils;
 import uk.humbkr.xtream2jellyfin.metadata.nfo.EpisodeNfo;
 import uk.humbkr.xtream2jellyfin.metadata.nfo.MovieNfo;
+import uk.humbkr.xtream2jellyfin.metadata.nfo.SeasonNfo;
 import uk.humbkr.xtream2jellyfin.metadata.nfo.TvShowNfo;
 import uk.humbkr.xtream2jellyfin.xtream.model.*;
 
@@ -252,6 +253,19 @@ public class NfoGenerator {
             if (rating != null) {
                 builder.userRating(rating);
             }
+
+            // Thumbs - episode screenshot/poster
+            List<EpisodeNfo.Thumb> thumbs = new ArrayList<>();
+            String movieImage = info.getMovieImage();
+            if (StringUtils.isNotBlank(movieImage)) {
+                thumbs.add(EpisodeNfo.Thumb.builder()
+                        .aspect("thumb")
+                        .url(movieImage)
+                        .build());
+            }
+            if (!thumbs.isEmpty()) {
+                builder.thumbs(thumbs);
+            }
         }
 
         return builder.build();
@@ -463,6 +477,95 @@ public class NfoGenerator {
             }
         }
         return fullTitle;
+    }
+
+    /**
+     * Generate NFO XML content for a season
+     *
+     * @param season The season metadata from Xtream
+     * @param tmdbId The TMDB ID for the series
+     * @return NFO XML content as String, or null if generation fails
+     */
+    public static String generateSeasonNfo(SeriesSeason season, String tmdbId) {
+        try {
+            SeasonNfo nfo = buildSeasonNfo(season, tmdbId);
+            return XmlUtils.getXmlMapper().writeValueAsString(nfo);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to generate season NFO", e);
+            return null;
+        }
+    }
+
+    private static SeasonNfo buildSeasonNfo(SeriesSeason season, String tmdbId) {
+        SeasonNfo.SeasonNfoBuilder builder = SeasonNfo.builder();
+
+        // Title
+        if (StringUtils.isNotBlank(season.getName())) {
+            builder.title(season.getName());
+        }
+
+        // Plot/Overview
+        if (StringUtils.isNotBlank(season.getOverview())) {
+            builder.plot(season.getOverview());
+        }
+
+        // Season number
+        if (season.getSeasonNumber() != null) {
+            builder.seasonNumber(season.getSeasonNumber());
+        }
+
+        // Premiered (air date)
+        if (StringUtils.isNotBlank(season.getAirDate())) {
+            builder.premiered(season.getAirDate());
+
+            // Extract year from air date (assuming format YYYY-MM-DD)
+            try {
+                String year = season.getAirDate().substring(0, 4);
+                builder.year(Integer.parseInt(year));
+            } catch (Exception e) {
+                log.debug("Failed to parse year from air date: {}", season.getAirDate());
+            }
+        }
+
+        // Unique IDs
+        List<SeasonNfo.UniqueId> uniqueIds = new ArrayList<>();
+        if (StringUtils.isNotBlank(tmdbId)) {
+            uniqueIds.add(SeasonNfo.UniqueId.builder()
+                    .type("tmdb")
+                    .isDefault(true)
+                    .value(tmdbId)
+                    .build());
+        }
+        if (season.getId() != null) {
+            uniqueIds.add(SeasonNfo.UniqueId.builder()
+                    .type("tvdb")
+                    .isDefault(false)
+                    .value(season.getId().toString())
+                    .build());
+        }
+        if (!uniqueIds.isEmpty()) {
+            builder.uniqueIds(uniqueIds);
+        }
+
+        // Thumbs
+        List<SeasonNfo.Thumb> thumbs = new ArrayList<>();
+        if (StringUtils.isNotBlank(season.getCover())) {
+            thumbs.add(SeasonNfo.Thumb.builder()
+                    .aspect("poster")
+                    .url(season.getCover())
+                    .build());
+        }
+        if (StringUtils.isNotBlank(season.getCoverBig())) {
+            thumbs.add(SeasonNfo.Thumb.builder()
+                    .aspect("banner")
+                    .url(season.getCoverBig())
+                    .build());
+        }
+        if (!thumbs.isEmpty()) {
+            builder.thumbs(thumbs);
+        }
+
+        return builder.build();
     }
 
 }
