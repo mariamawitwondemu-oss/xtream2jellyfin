@@ -135,7 +135,7 @@ public class NfoGenerator {
         // Genres
         String genre = info.getGenre();
         if (StringUtils.isNotBlank(genre)) {
-            List<String> genres = Arrays.stream(genre.split("/"))
+            List<String> genres = Arrays.stream(RegexUtils.split(genre, "/"))
                     .map(String::trim)
                     .filter(StringUtils::isNotBlank)
                     .collect(Collectors.toList());
@@ -147,7 +147,7 @@ public class NfoGenerator {
         // Actors
         String cast = info.getCast();
         if (StringUtils.isNotBlank(cast)) {
-            List<TvShowNfo.Actor> actors = Arrays.stream(cast.split(","))
+            List<TvShowNfo.Actor> actors = Arrays.stream(RegexUtils.split(cast, ","))
                     .map(String::trim)
                     .filter(StringUtils::isNotBlank)
                     .map(name -> TvShowNfo.Actor.builder().name(name).build())
@@ -160,7 +160,7 @@ public class NfoGenerator {
         // Directors
         String director = info.getDirector();
         if (StringUtils.isNotBlank(director)) {
-            List<String> directors = Arrays.stream(director.split(","))
+            List<String> directors = Arrays.stream(RegexUtils.split(director, ","))
                     .map(String::trim)
                     .filter(StringUtils::isNotBlank)
                     .collect(Collectors.toList());
@@ -243,7 +243,7 @@ public class NfoGenerator {
             var info = episode.getInfo();
 
             // Aired date
-            String airDate = info.getAirDate();
+            String airDate = info.getReleaseDate();
             if (StringUtils.isNotBlank(airDate)) {
                 builder.aired(airDate);
             }
@@ -400,7 +400,7 @@ public class NfoGenerator {
         // Genres
         String genre = info.getGenre();
         if (StringUtils.isNotBlank(genre)) {
-            List<String> genres = Arrays.stream(genre.split("/"))
+            List<String> genres = Arrays.stream(RegexUtils.split(genre, "/"))
                     .map(String::trim)
                     .filter(StringUtils::isNotBlank)
                     .collect(Collectors.toList());
@@ -415,7 +415,7 @@ public class NfoGenerator {
             actors = info.getCast();
         }
         if (StringUtils.isNotBlank(actors)) {
-            List<MovieNfo.Actor> actorList = Arrays.stream(actors.split(","))
+            List<MovieNfo.Actor> actorList = Arrays.stream(RegexUtils.split(actors, ","))
                     .map(String::trim)
                     .filter(StringUtils::isNotBlank)
                     .map(actorName -> MovieNfo.Actor.builder().name(actorName).build())
@@ -428,7 +428,7 @@ public class NfoGenerator {
         // Directors
         String director = info.getDirector();
         if (StringUtils.isNotBlank(director)) {
-            List<String> directors = Arrays.stream(director.split(","))
+            List<String> directors = Arrays.stream(RegexUtils.split(director, ","))
                     .map(String::trim)
                     .filter(StringUtils::isNotBlank)
                     .collect(Collectors.toList());
@@ -536,31 +536,20 @@ public class NfoGenerator {
                     .value(tmdbId)
                     .build());
         }
-        if (season.getId() != null) {
-            uniqueIds.add(SeasonNfo.UniqueId.builder()
-                    .type("tvdb")
-                    .isDefault(false)
-                    .value(season.getId().toString())
-                    .build());
-        }
+
         if (!uniqueIds.isEmpty()) {
             builder.uniqueIds(uniqueIds);
         }
 
         // Thumbs
         List<SeasonNfo.Thumb> thumbs = new ArrayList<>();
-        if (StringUtils.isNotBlank(season.getCover())) {
+        if (StringUtils.isNotBlank(season.getCoverTmdb())) {
             thumbs.add(SeasonNfo.Thumb.builder()
                     .aspect("poster")
-                    .url(season.getCover())
+                    .url(season.getCoverTmdb())
                     .build());
         }
-        if (StringUtils.isNotBlank(season.getCoverBig())) {
-            thumbs.add(SeasonNfo.Thumb.builder()
-                    .aspect("banner")
-                    .url(season.getCoverBig())
-                    .build());
-        }
+
         if (!thumbs.isEmpty()) {
             builder.thumbs(thumbs);
         }

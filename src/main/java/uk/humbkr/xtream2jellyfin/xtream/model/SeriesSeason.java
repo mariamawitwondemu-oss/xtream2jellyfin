@@ -6,22 +6,23 @@ import lombok.Data;
 @Data
 public class SeriesSeason {
 
-    @JsonProperty("air_date")
-    private String airDate;
+    private String name;
 
     @JsonProperty("episode_count")
     private Integer episodeCount;
 
-    private Integer id;
-
-    private String name;
-
     private String overview;
+
+    @JsonProperty("air_date")
+    private String airDate;
+
+    private String cover;
+
+    @JsonProperty("cover_tmdb")
+    private String coverTmdb;
 
     @JsonProperty("season_number")
     private Integer seasonNumber;
-
-    private String cover;
 
     @JsonProperty("cover_big")
     private String coverBig;
