@@ -13,6 +13,7 @@ import uk.humbkr.xtream2jellyfin.filemanager.FileManager;
 import uk.humbkr.xtream2jellyfin.http.ConfigurableHttpClient;
 import uk.humbkr.xtream2jellyfin.nameformat.CategoryNameFormat;
 import uk.humbkr.xtream2jellyfin.nameformat.StreamNameFormat;
+import uk.humbkr.xtream2jellyfin.validation.DomainValidator;
 import uk.humbkr.xtream2jellyfin.xtream.model.*;
 
 import java.io.IOException;
@@ -56,6 +57,8 @@ public abstract class BaseStreamsHandler {
 
     protected final CategoryNameFormat categoryNameFormat;
 
+    protected final DomainValidator domainValidator;
+
     private final Logger log;
 
     protected String providerUrl;
@@ -73,10 +76,12 @@ public abstract class BaseStreamsHandler {
     protected long processingStartTime = 0;
 
     public BaseStreamsHandler(XtreamProviderConfig providerConfig, FileManager fileManager,
-                              AppSettings appSettings, ConfigurableHttpClient httpClient, Logger log) {
+                              AppSettings appSettings, ConfigurableHttpClient httpClient,
+                              DomainValidator domainValidator, Logger log) {
         this.log = log;
         this.objectMapper = JsonUtils.getJsonMapper();
         this.httpClient = httpClient;
+        this.domainValidator = domainValidator;
 
         this.fileManager = fileManager;
         this.providerName = Objects.requireNonNull(providerConfig.getName());

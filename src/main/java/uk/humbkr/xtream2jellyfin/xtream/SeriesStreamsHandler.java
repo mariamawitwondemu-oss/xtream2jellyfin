@@ -8,6 +8,7 @@ import uk.humbkr.xtream2jellyfin.filemanager.FileManager;
 import uk.humbkr.xtream2jellyfin.http.ConfigurableHttpClient;
 import uk.humbkr.xtream2jellyfin.metadata.NfoGenerator;
 import uk.humbkr.xtream2jellyfin.nameformat.StreamNameFormatContext;
+import uk.humbkr.xtream2jellyfin.validation.DomainValidator;
 import uk.humbkr.xtream2jellyfin.xtream.model.*;
 
 import java.util.ArrayList;
@@ -19,8 +20,9 @@ import java.util.Map;
 public class SeriesStreamsHandler extends BaseStreamsHandler {
 
     public SeriesStreamsHandler(XtreamProviderConfig providerConfig, FileManager fileManager,
-                                AppSettings appSettings, ConfigurableHttpClient httpClient) {
-        super(providerConfig, fileManager, appSettings, httpClient, log);
+                                AppSettings appSettings, ConfigurableHttpClient httpClient,
+                                DomainValidator domainValidator) {
+        super(providerConfig, fileManager, appSettings, httpClient, domainValidator, log);
     }
 
     @Override
@@ -73,7 +75,7 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
                 String seriesFolderPath = getSeriesFolderPath(seriesItem, info);
                 if (writeMetadataNfo) {
                     String nfoPath = seriesFolderPath + "/tvshow.nfo";
-                    String nfoContent = NfoGenerator.generateTvShowNfo(seriesItem, info);
+                    String nfoContent = NfoGenerator.generateTvShowNfo(seriesItem, info, domainValidator);
                     if (nfoContent != null) {
                         addFile(nfoPath, nfoContent);
                     }
@@ -100,7 +102,7 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
                                     String seasonPad = String.format("%02d", seasonNumber);
                                     String seasonDir = "Season " + seasonPad;
                                     String seasonNfoPath = seriesFolderPath + "/" + seasonDir + "/season.nfo";
-                                    String seasonNfoContent = NfoGenerator.generateSeasonNfo(season, info.getTmdb());
+                                    String seasonNfoContent = NfoGenerator.generateSeasonNfo(season, info.getTmdb(), domainValidator);
                                     if (seasonNfoContent != null) {
                                         addFile(seasonNfoPath, seasonNfoContent);
                                     }
@@ -147,7 +149,7 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
             // Generate and write episode NFO
             if (writeMetadataNfo) {
                 String episodeNfoPath = seriesFolderPath + "/" + seasonDir + "/" + episodeFile + ".nfo";
-                String episodeNfoContent = NfoGenerator.generateEpisodeNfo(episode);
+                String episodeNfoContent = NfoGenerator.generateEpisodeNfo(episode, domainValidator);
                 if (episodeNfoContent != null) {
                     addFile(episodeNfoPath, episodeNfoContent);
                 }

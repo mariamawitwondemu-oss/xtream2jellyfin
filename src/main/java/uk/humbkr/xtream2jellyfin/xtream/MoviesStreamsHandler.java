@@ -7,6 +7,7 @@ import uk.humbkr.xtream2jellyfin.filemanager.FileManager;
 import uk.humbkr.xtream2jellyfin.http.ConfigurableHttpClient;
 import uk.humbkr.xtream2jellyfin.metadata.NfoGenerator;
 import uk.humbkr.xtream2jellyfin.nameformat.StreamNameFormatContext;
+import uk.humbkr.xtream2jellyfin.validation.DomainValidator;
 import uk.humbkr.xtream2jellyfin.xtream.model.*;
 
 import java.util.ArrayList;
@@ -18,8 +19,9 @@ public class MoviesStreamsHandler extends BaseStreamsHandler {
     public MoviesStreamsHandler(XtreamProviderConfig providerConfig,
                                 FileManager fileManager,
                                 AppSettings appSettings,
-                                ConfigurableHttpClient httpClient) {
-        super(providerConfig, fileManager, appSettings, httpClient, log);
+                                ConfigurableHttpClient httpClient,
+                                DomainValidator domainValidator) {
+        super(providerConfig, fileManager, appSettings, httpClient, domainValidator, log);
     }
 
     @Override
@@ -68,7 +70,7 @@ public class MoviesStreamsHandler extends BaseStreamsHandler {
         if (writeMetadataNfo) {
             MovieDetails movieDetails = getData(Endpoint.PLAYER, Action.VOD_INFO, movieId, MovieDetails.class);
             String nfoFile = moviePath + ".nfo";
-            String nfoContent = NfoGenerator.generateMovieNfo(movieItem, movieDetails);
+            String nfoContent = NfoGenerator.generateMovieNfo(movieItem, movieDetails, domainValidator);
             if (nfoContent != null) {
                 addFile(nfoFile, nfoContent);
             }

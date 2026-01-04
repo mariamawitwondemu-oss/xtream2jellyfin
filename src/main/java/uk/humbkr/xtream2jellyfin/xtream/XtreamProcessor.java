@@ -9,10 +9,13 @@ import uk.humbkr.xtream2jellyfin.filemanager.CachedFileManager;
 import uk.humbkr.xtream2jellyfin.filemanager.FileManager;
 import uk.humbkr.xtream2jellyfin.filemanager.SimpleFileManager;
 import uk.humbkr.xtream2jellyfin.http.ConfigurableHttpClient;
+import uk.humbkr.xtream2jellyfin.validation.DomainValidator;
 import uk.humbkr.xtream2jellyfin.xtream.model.Endpoint;
 import uk.humbkr.xtream2jellyfin.xtream.model.Profile;
 import uk.humbkr.xtream2jellyfin.xtream.model.ServerInfo;
 import uk.humbkr.xtream2jellyfin.xtream.model.UserInfo;
+
+import java.util.Set;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -32,6 +35,8 @@ public class XtreamProcessor implements AutoCloseable {
 
     private final FileManager fileManager;
 
+    private final DomainValidator domainValidator;
+
     private final List<BaseStreamsHandler> streamHandlers = new ArrayList<>(3);
 
     public XtreamProcessor(@NonNull AppSettings appSettings, @NonNull XtreamProviderConfig providerConfig) {
@@ -44,14 +49,17 @@ public class XtreamProcessor implements AutoCloseable {
         this.fileManager = this.createFileManager(appSettings);
         log.info("Using file manager: {}", this.fileManager.getClass().getSimpleName());
 
+        // Create domain validator
+        this.domainValidator = createDomainValidator(appSettings);
+
         if (providerConfig.getLiveSettings().isEnabled()) {
-            streamHandlers.add(new LiveStreamsHandler(providerConfig, fileManager, appSettings, httpClient));
+            streamHandlers.add(new LiveStreamsHandler(providerConfig, fileManager, appSettings, httpClient, domainValidator));
         }
         if (providerConfig.getSeriesSettings().isEnabled()) {
-            streamHandlers.add(new SeriesStreamsHandler(providerConfig, fileManager, appSettings, httpClient));
+            streamHandlers.add(new SeriesStreamsHandler(providerConfig, fileManager, appSettings, httpClient, domainValidator));
         }
         if (providerConfig.getMoviesSettings().isEnabled()) {
-            streamHandlers.add(new MoviesStreamsHandler(providerConfig, fileManager, appSettings, httpClient));
+            streamHandlers.add(new MoviesStreamsHandler(providerConfig, fileManager, appSettings, httpClient, domainValidator));
         }
     }
 
@@ -64,6 +72,22 @@ public class XtreamProcessor implements AutoCloseable {
         } else {
             return new SimpleFileManager(mediaDir);
         }
+    }
+
+    private DomainValidator createDomainValidator(AppSettings appSettings) {
+        if (!appSettings.isDomainValidationEnabled()) {
+            log.info("Domain validation is disabled");
+            return null;
+        }
+
+        String cacheDir = appSettings.getCacheDir() + "/" + providerName;
+        int timeout = appSettings.getDomainValidationTimeout();
+        int failureThreshold = appSettings.getDomainValidationFailureThreshold();
+        var whitelist = appSettings.getDomainValidationWhitelist();
+
+        log.info("Domain validation enabled (timeout: {}ms, failure threshold: {}, whitelist: {})",
+                timeout, failureThreshold, whitelist);
+        return new DomainValidator(cacheDir, timeout, failureThreshold, whitelist);
     }
 
     public void run() {
@@ -86,6 +110,8 @@ public class XtreamProcessor implements AutoCloseable {
             streamHandlers.forEach(BaseStreamsHandler::process);
 
             fileManager.onProcessEnd();
+
+            reportBlacklistedDomains();
 
             log.info("{} processing completed", providerName);
 
@@ -192,6 +218,24 @@ public class XtreamProcessor implements AutoCloseable {
 //                log.error("Failed to trigger library refresh: {}", serverDetails, e);
 //            }
 //        }
+    }
+
+    private void reportBlacklistedDomains() {
+        if (domainValidator == null) {
+            return;
+        }
+
+        Set<String> blacklisted = domainValidator.getBlacklistedDomains();
+        if (!blacklisted.isEmpty()) {
+            log.warn("[{}] {} domains were blacklisted due to validation failures: {}",
+                    providerName, blacklisted.size(), blacklisted);
+        }
+
+        // Save cache for persistence across runs
+        domainValidator.saveCache();
+
+        // Reset blacklisted domains for next iteration
+        domainValidator.reset();
     }
 
     @Override

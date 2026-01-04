@@ -15,6 +15,7 @@ Import IPTV VOD streams into Jellyfin.
   - movies (VOD) with .strm files
   - TV series with organized season/episode structures
 - metadata support: NFO files (Jellyfin/Kodi compatible) for movies, series, and episodes
+- domain validation: filters invalid image URLs with smart caching and configurable whitelist
 - flexible configuration:
   - per-media-type settings with regex-based name cleaning
   - category filtering (include/exclude lists)
@@ -72,6 +73,83 @@ The cache database is stored in `{media_dir}/{provider_name}/.cache/files.json`.
 - **`simple`**: first-time setup, troubleshooting, or when you want every file rewritten
 - **`cached`**: production use with scheduled syncs (recommended for best performance)
 
+## Domain Validation
+
+Domain validation improves Jellyfin library scan performance by filtering out invalid image URLs before writing them to NFO files. This prevents Jellyfin from making HTTP requests to defunct IPTV provider domains.
+
+### How it works
+
+When enabled (`domain_validation_enabled: true`), the application:
+
+1. **Validates domains before writing URLs**: before including an image URL in NFO metadata, checks if the domain is reachable
+2. **Uses HTTP HEAD requests**: lightweight validation that doesn't download full content
+3. **Implements smart caching**: tracks domain validation results with a 3-strike failure threshold
+4. **Blacklists unreliable domains**: domains that fail 3 times are permanently marked as invalid
+5. **Whitelists trusted domains**: known-good domains skip validation entirely
+
+### Why this matters for Jellyfin
+
+IPTV providers often include image URLs from their own domains (e.g., `theking365tv.tv`, `r56mail.com`). These domains:
+
+- frequently go offline or change
+- cause Jellyfin metadata refresh to hang on HTTP timeouts
+- slow down library scans dramatically (thousands of failed requests)
+
+By filtering invalid domains at write time, Jellyfin never attempts to fetch these images.
+
+### Configuration
+
+```yaml
+app:
+  domain_validation_enabled: true
+  domain_validation_timeout_ms: 5000
+  domain_validation_failure_threshold: 3
+  domain_validation_whitelist:
+    - image.tmdb.org    # TMDB images (always valid)
+    - cdn.example.com   # add your trusted CDN domains
+```
+
+### Domain cache
+
+The validation cache is stored in `{cache_dir}/{provider_name}/domain-cache.json`:
+
+```json
+{
+  "image.tmdb.org": {
+    "status": "valid",
+    "failureCount": 0,
+    "lastChecked": 1704316200000
+  },
+  "theking365tv.tv": {
+    "status": "invalid",
+    "failureCount": 3,
+    "lastChecked": 1704316800000
+  }
+}
+```
+
+The cache is **never automatically cleaned**. To re-validate a domain:
+
+- remove its entry from the cache file, or
+- delete the entire cache file to start fresh
+
+### Whitelist behavior
+
+Whitelisted domains:
+
+- skip HTTP validation entirely (always considered valid)
+- improve performance for known-good CDNs
+- default includes `image.tmdb.org` (used for TMDB metadata)
+
+### Reporting
+
+At the end of each import, blacklisted domains are logged:
+
+```
+[WARN] [Provider1] 12 domains were blacklisted due to validation failures:
+       [theking365tv.tv, r56mail.com, r365mail.live, ...]
+```
+
 ## Requirements
 
 - Java 21 or higher
@@ -103,6 +181,13 @@ app:
   file_manager_type: "simple"    # file manager: "simple" or "cached" (default: "simple")
   media_dir: "media"             # base media output directory (default: "media")
   write_metadata_nfo: true       # write NFO metadata files for Jellyfin/Kodi (default: true)
+
+  # Domain validation configuration (speeds up Jellyfin library scans)
+  domain_validation_enabled: true
+  domain_validation_timeout_ms: 5000
+  domain_validation_failure_threshold: 3
+  domain_validation_whitelist:
+    - image.tmdb.org    # TMDB images (default, always valid)
 
   # Logging configuration
   logging:
@@ -176,6 +261,12 @@ providers:
   - `cached`: tracks changes and only writes modified files
 - `media_dir`: base media output directory (default: `media`)
 - `write_metadata_nfo`: write NFO metadata files compatible with Jellyfin/Kodi (default: `true`)
+- `domain_validation_enabled`: enable domain validation for image URLs in NFO files (default: `true`)
+- `domain_validation_timeout_ms`: HTTP timeout for domain validation in milliseconds (default: `5000`)
+- `domain_validation_failure_threshold`: number of failures before blacklisting a domain (default: `3`)
+- `domain_validation_whitelist`: list of trusted domains that skip validation (default: `["image.tmdb.org"]`)
+  - whitelisted domains are always considered valid without HTTP checks
+  - useful for CDN domains you know are reliable
 - `logging`: logging configuration
   - `level`: root log level - `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR` (default: `INFO`)
   - `loggers`: per-package log levels (optional)

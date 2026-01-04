@@ -5,6 +5,7 @@ import uk.humbkr.xtream2jellyfin.config.AppSettings;
 import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
 import uk.humbkr.xtream2jellyfin.filemanager.FileManager;
 import uk.humbkr.xtream2jellyfin.http.ConfigurableHttpClient;
+import uk.humbkr.xtream2jellyfin.validation.DomainValidator;
 import uk.humbkr.xtream2jellyfin.xtream.model.Endpoint;
 import uk.humbkr.xtream2jellyfin.xtream.model.MediaType;
 
@@ -16,8 +17,9 @@ public class LiveStreamsHandler extends BaseStreamsHandler {
     private String epgData;
 
     public LiveStreamsHandler(XtreamProviderConfig providerConfig, FileManager fileManager,
-                              AppSettings appSettings, ConfigurableHttpClient httpClient) {
-        super(providerConfig, fileManager, appSettings, httpClient, log);
+                              AppSettings appSettings, ConfigurableHttpClient httpClient,
+                              DomainValidator domainValidator) {
+        super(providerConfig, fileManager, appSettings, httpClient, domainValidator, log);
     }
 
     @Override

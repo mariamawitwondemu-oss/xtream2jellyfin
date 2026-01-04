@@ -4,6 +4,16 @@ app:
   write_metadata_json: false
   write_metadata_nfo: true
 
+  # Domain validation configuration (speeds up Jellyfin library scans)
+  domain_validation_enabled: true
+  domain_validation_timeout_ms: 5000
+  domain_validation_failure_threshold: 3
+  domain_validation_whitelist:
+    - image.tmdb.org    # TMDB images (default, always valid)
+    # Add trusted domains below to skip validation (always considered valid)
+    # - cdn.example.com
+    # - images.yourprovider.com
+
   # Logging configuration
   logging:
     level: "INFO"                    # Root log level: TRACE, DEBUG, INFO, WARN, ERROR

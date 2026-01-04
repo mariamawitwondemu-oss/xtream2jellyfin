@@ -10,6 +10,8 @@ import uk.humbkr.xtream2jellyfin.metadata.nfo.EpisodeNfo;
 import uk.humbkr.xtream2jellyfin.metadata.nfo.MovieNfo;
 import uk.humbkr.xtream2jellyfin.metadata.nfo.SeasonNfo;
 import uk.humbkr.xtream2jellyfin.metadata.nfo.TvShowNfo;
+import uk.humbkr.xtream2jellyfin.validation.DomainValidator;
+import uk.humbkr.xtream2jellyfin.validation.UrlFilterUtils;
 import uk.humbkr.xtream2jellyfin.xtream.model.*;
 
 import java.util.ArrayList;
@@ -39,6 +41,24 @@ public class NfoGenerator {
     }
 
     /**
+     * Generate NFO XML content for a TV show with domain validation
+     *
+     * @param seriesItem The series item metadata from Xtream
+     * @param info       The series info metadata from Xtream
+     * @param validator  The domain validator to filter URLs
+     * @return NFO XML content as String, or null if generation fails
+     */
+    public static String generateTvShowNfo(SeriesItem seriesItem, SeriesInfo info, DomainValidator validator) {
+        try {
+            TvShowNfo nfo = buildTvShowNfo(seriesItem, info, validator);
+            return XmlUtils.getXmlMapper().writeValueAsString(nfo);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to generate TV show NFO", e);
+            return null;
+        }
+    }
+
+    /**
      * Generate NFO XML content for an episode
      *
      * @param episode The episode metadata from Xtream
@@ -47,6 +67,23 @@ public class NfoGenerator {
     public static String generateEpisodeNfo(SeriesEpisode episode) {
         try {
             EpisodeNfo nfo = buildEpisodeNfo(episode);
+            return XmlUtils.getXmlMapper().writeValueAsString(nfo);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to generate episode NFO", e);
+            return null;
+        }
+    }
+
+    /**
+     * Generate NFO XML content for an episode with domain validation
+     *
+     * @param episode   The episode metadata from Xtream
+     * @param validator The domain validator to filter URLs
+     * @return NFO XML content as String, or null if generation fails
+     */
+    public static String generateEpisodeNfo(SeriesEpisode episode, DomainValidator validator) {
+        try {
+            EpisodeNfo nfo = buildEpisodeNfo(episode, validator);
             return XmlUtils.getXmlMapper().writeValueAsString(nfo);
         } catch (JsonProcessingException e) {
             log.error("Failed to generate episode NFO", e);
@@ -70,10 +107,41 @@ public class NfoGenerator {
         }
     }
 
+    /**
+     * Generate NFO file for a movie with domain validation
+     *
+     * @param movie     The movie item from Xtream
+     * @param validator The domain validator to filter URLs
+     * @return NFO XML content as String, or null if generation fails
+     */
+    public static String generateMovieNfo(MovieItem movie, DomainValidator validator) {
+        try {
+            MovieNfo nfo = buildMovieNfo(movie, validator);
+            return XmlUtils.getXmlMapper().writeValueAsString(nfo);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to generate movie NFO", e);
+            return null;
+        }
+    }
+
     public static String generateMovieNfo(MovieItem movieItem, MovieDetails movieDetails) {
         MovieNfo movieNfo = buildMovieNfo(movieDetails);
         if (StringUtils.isBlank(movieNfo.getTrailer())) {
             // Override trailer URL from MovieItem if not defined in MovieDetails
+            movieNfo.setTrailer(movieItem.getYoutubeTrailerUrl());
+        }
+        try {
+            return XmlUtils.getXmlMapper().writeValueAsString(movieNfo);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to generate movie NFO", e);
+            return null;
+        }
+    }
+
+    public static String generateMovieNfo(MovieItem movieItem, MovieDetails movieDetails, DomainValidator validator) {
+        MovieNfo movieNfo = buildMovieNfo(movieDetails, validator);
+        if (StringUtils.isBlank(movieNfo.getTrailer())) {
+            // Override trailer URL from MovieItem (trailers are not validated)
             movieNfo.setTrailer(movieItem.getYoutubeTrailerUrl());
         }
         try {
@@ -496,6 +564,24 @@ public class NfoGenerator {
         }
     }
 
+    /**
+     * Generate NFO XML content for a season with domain validation
+     *
+     * @param season    The season metadata from Xtream
+     * @param tmdbId    The TMDB ID for the series
+     * @param validator The domain validator to filter URLs
+     * @return NFO XML content as String, or null if generation fails
+     */
+    public static String generateSeasonNfo(SeriesSeason season, String tmdbId, DomainValidator validator) {
+        try {
+            SeasonNfo nfo = buildSeasonNfo(season, tmdbId, validator);
+            return XmlUtils.getXmlMapper().writeValueAsString(nfo);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to generate season NFO", e);
+            return null;
+        }
+    }
+
     private static SeasonNfo buildSeasonNfo(SeriesSeason season, String tmdbId) {
         SeasonNfo.SeasonNfoBuilder builder = SeasonNfo.builder();
 
@@ -555,6 +641,106 @@ public class NfoGenerator {
         }
 
         return builder.build();
+    }
+
+    // ========== Overloaded build methods with DomainValidator ==========
+
+    private static TvShowNfo buildTvShowNfo(SeriesItem seriesItem, SeriesInfo info, DomainValidator validator) {
+        TvShowNfo nfo = buildTvShowNfo(seriesItem, info);
+
+        // Filter thumbs (trailers are NOT validated)
+        if (nfo.getThumbs() != null) {
+            List<TvShowNfo.Thumb> filteredThumbs = filterTvShowThumbs(nfo.getThumbs(), validator);
+            nfo.setThumbs(filteredThumbs.isEmpty() ? null : filteredThumbs);
+        }
+
+        return nfo;
+    }
+
+    private static EpisodeNfo buildEpisodeNfo(SeriesEpisode episode, DomainValidator validator) {
+        EpisodeNfo nfo = buildEpisodeNfo(episode);
+
+        // Filter thumbs
+        if (nfo.getThumbs() != null) {
+            List<EpisodeNfo.Thumb> filteredThumbs = filterEpisodeThumbs(nfo.getThumbs(), validator);
+            nfo.setThumbs(filteredThumbs.isEmpty() ? null : filteredThumbs);
+        }
+
+        return nfo;
+    }
+
+    private static MovieNfo buildMovieNfo(MovieItem movie, DomainValidator validator) {
+        MovieNfo nfo = buildMovieNfo(movie);
+
+        // Filter thumbs (trailers are NOT validated)
+        if (nfo.getThumbs() != null) {
+            List<MovieNfo.Thumb> filteredThumbs = filterMovieThumbs(nfo.getThumbs(), validator);
+            nfo.setThumbs(filteredThumbs.isEmpty() ? null : filteredThumbs);
+        }
+
+        return nfo;
+    }
+
+    private static MovieNfo buildMovieNfo(MovieDetails movieDetails, DomainValidator validator) {
+        MovieNfo nfo = buildMovieNfo(movieDetails);
+
+        // Filter thumbs (trailers are NOT validated)
+        if (nfo.getThumbs() != null) {
+            List<MovieNfo.Thumb> filteredThumbs = filterMovieThumbs(nfo.getThumbs(), validator);
+            nfo.setThumbs(filteredThumbs.isEmpty() ? null : filteredThumbs);
+        }
+
+        return nfo;
+    }
+
+    private static SeasonNfo buildSeasonNfo(SeriesSeason season, String tmdbId, DomainValidator validator) {
+        SeasonNfo nfo = buildSeasonNfo(season, tmdbId);
+
+        // Filter thumbs
+        if (nfo.getThumbs() != null) {
+            List<SeasonNfo.Thumb> filteredThumbs = filterSeasonThumbs(nfo.getThumbs(), validator);
+            nfo.setThumbs(filteredThumbs.isEmpty() ? null : filteredThumbs);
+        }
+
+        return nfo;
+    }
+
+    // ========== Helper methods to filter thumbs ==========
+
+    private static List<TvShowNfo.Thumb> filterTvShowThumbs(List<TvShowNfo.Thumb> thumbs, DomainValidator validator) {
+        if (validator == null || thumbs == null) {
+            return thumbs;
+        }
+        return thumbs.stream()
+                .filter(t -> UrlFilterUtils.isUrlWithValidDomain(t.getUrl(), validator))
+                .collect(Collectors.toList());
+    }
+
+    private static List<EpisodeNfo.Thumb> filterEpisodeThumbs(List<EpisodeNfo.Thumb> thumbs, DomainValidator validator) {
+        if (validator == null || thumbs == null) {
+            return thumbs;
+        }
+        return thumbs.stream()
+                .filter(t -> UrlFilterUtils.isUrlWithValidDomain(t.getUrl(), validator))
+                .collect(Collectors.toList());
+    }
+
+    private static List<MovieNfo.Thumb> filterMovieThumbs(List<MovieNfo.Thumb> thumbs, DomainValidator validator) {
+        if (validator == null || thumbs == null) {
+            return thumbs;
+        }
+        return thumbs.stream()
+                .filter(t -> UrlFilterUtils.isUrlWithValidDomain(t.getUrl(), validator))
+                .collect(Collectors.toList());
+    }
+
+    private static List<SeasonNfo.Thumb> filterSeasonThumbs(List<SeasonNfo.Thumb> thumbs, DomainValidator validator) {
+        if (validator == null || thumbs == null) {
+            return thumbs;
+        }
+        return thumbs.stream()
+                .filter(t -> UrlFilterUtils.isUrlWithValidDomain(t.getUrl(), validator))
+                .collect(Collectors.toList());
     }
 
 }
