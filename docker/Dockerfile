@@ -23,10 +23,10 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir -p /app/config /app/cache /app/media
 
-RUN groupadd -g 1000 java && useradd -u 1000 -g java java
+RUN groupadd -r java && useradd -r -g java java
 
 COPY --from=builder /build/target/xtream2jellyfin-${VERSION}-jar-with-dependencies.jar /app/xtream2jellyfin.jar
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 RUN chmod +x /usr/local/bin/entrypoint.sh
 

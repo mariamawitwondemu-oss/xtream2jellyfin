@@ -1,37 +1,32 @@
 #!/bin/bash
 
 # Build script for multi-platform Docker images using buildx
-# Usage: ./build-docker.sh [version] [platforms] [push]
+# Usage: ./build-docker.sh [platforms] [push]
 #
 # Examples:
 #   ./build-docker.sh                           # Build for local platform only (version from pom.xml)
-#   ./build-docker.sh 1.0.0                     # Build for local platform with specific version
-#   ./build-docker.sh 1.0.0 multi               # Build for multiple platforms
-#   ./build-docker.sh 1.0.0 multi push          # Build and push to registry
+#   ./build-docker.sh multi                     # Build for multiple platforms
+#   ./build-docker.sh multi push                # Build and push to registry
 
 set -eou pipefail
 
-# Extract version from pom.xml if not provided
-if [ -z "${1:-}" ]; then
-    VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-    echo "Using version from pom.xml: ${VERSION}"
-else
-    VERSION=$1
-fi
+# Always extract version from pom.xml
+VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+echo "Using version from pom.xml: ${VERSION}"
 
 PLATFORMS="linux/amd64"
 PUSH_FLAG=""
 ACTION="load"
 
 # Check if multi-platform build requested
-if [ "${2:-}" == "multi" ]; then
+if [ "${1:-}" == "multi" ]; then
     PLATFORMS="linux/amd64,linux/arm64,linux/arm/v7"
     ACTION="load"
     echo "Building for multiple platforms: ${PLATFORMS}"
 fi
 
 # Check if push requested
-if [ "${3:-}" == "push" ] || [ "${2:-}" == "push" ]; then
+if [ "${2:-}" == "push" ] || [ "${1:-}" == "push" ]; then
     PUSH_FLAG="--push"
     ACTION=""
     echo "Will push to registry"
@@ -42,7 +37,7 @@ if [ -n "$PUSH_FLAG" ]; then
     ACTION=""
 else
     # For multi-platform without push, we can't load (limitation of buildx)
-    if [ "${2:-}" == "multi" ]; then
+    if [ "${1:-}" == "multi" ]; then
         echo "Warning: Multi-platform builds without push will only be cached, not loaded into Docker"
         ACTION=""
     fi
@@ -59,6 +54,7 @@ echo "  Version: ${VERSION}"
 
 # Build command
 BUILD_CMD="docker buildx build \
+    -f docker/Dockerfile \
     --platform ${PLATFORMS} \
     --build-arg VERSION=${VERSION} \
     -t ${IMAGE_TAG} \
@@ -66,7 +62,7 @@ BUILD_CMD="docker buildx build \
     ${PUSH_FLAG}"
 
 # Add load flag if not pushing and single platform
-if [ -z "$PUSH_FLAG" ] && [ "${2:-}" != "multi" ]; then
+if [ -z "$PUSH_FLAG" ] && [ "${1:-}" != "multi" ]; then
     BUILD_CMD="${BUILD_CMD} --load"
 fi
 
@@ -81,7 +77,7 @@ eval ${BUILD_CMD}
 echo ""
 echo "Build complete!"
 
-if [ -z "$PUSH_FLAG" ] && [ "${2:-}" != "multi" ]; then
+if [ -z "$PUSH_FLAG" ] && [ "${1:-}" != "multi" ]; then
     echo "Image loaded: ${IMAGE_TAG}"
     echo "Image loaded: ${IMAGE_LATEST}"
 elif [ -n "$PUSH_FLAG" ]; then
