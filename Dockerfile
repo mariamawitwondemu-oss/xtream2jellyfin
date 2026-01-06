@@ -18,10 +18,20 @@ ARG VERSION
 
 WORKDIR /app
 
-RUN mkdir -p /app/config /app/cache /app/media
+RUN apt-get update && \
+    apt-get install -y gosu && \
+    rm -rf /var/lib/apt/lists/* && \
+    mkdir -p /app/config /app/cache /app/media
+
+RUN groupadd -g 1000 java && useradd -u 1000 -g java java
 
 COPY --from=builder /build/target/xtream2jellyfin-${VERSION}-jar-with-dependencies.jar /app/xtream2jellyfin.jar
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 VOLUME ["/app/config", "/app/cache", "/app/media"]
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 CMD ["java", "-jar", "/app/xtream2jellyfin.jar"]
