@@ -24,23 +24,6 @@ import java.util.stream.Collectors;
 public class NfoGenerator {
 
     /**
-     * Generate NFO XML content for a TV show
-     *
-     * @param seriesItem The series item metadata from Xtream
-     * @param info       The series info metadata from Xtream
-     * @return NFO XML content as String, or null if generation fails
-     */
-    public static String generateTvShowNfo(SeriesItem seriesItem, SeriesInfo info) {
-        try {
-            TvShowNfo nfo = buildTvShowNfo(seriesItem, info);
-            return XmlUtils.getXmlMapper().writeValueAsString(nfo);
-        } catch (JsonProcessingException e) {
-            log.error("Failed to generate TV show NFO", e);
-            return null;
-        }
-    }
-
-    /**
      * Generate NFO XML content for a TV show with domain validation
      *
      * @param seriesItem The series item metadata from Xtream
@@ -59,22 +42,6 @@ public class NfoGenerator {
     }
 
     /**
-     * Generate NFO XML content for an episode
-     *
-     * @param episode The episode metadata from Xtream
-     * @return NFO XML content as String, or null if generation fails
-     */
-    public static String generateEpisodeNfo(SeriesEpisode episode) {
-        try {
-            EpisodeNfo nfo = buildEpisodeNfo(episode);
-            return XmlUtils.getXmlMapper().writeValueAsString(nfo);
-        } catch (JsonProcessingException e) {
-            log.error("Failed to generate episode NFO", e);
-            return null;
-        }
-    }
-
-    /**
      * Generate NFO XML content for an episode with domain validation
      *
      * @param episode   The episode metadata from Xtream
@@ -87,53 +54,6 @@ public class NfoGenerator {
             return XmlUtils.getXmlMapper().writeValueAsString(nfo);
         } catch (JsonProcessingException e) {
             log.error("Failed to generate episode NFO", e);
-            return null;
-        }
-    }
-
-    /**
-     * Generate NFO file for a movie (typed model version).
-     *
-     * @param movie The movie item from Xtream
-     * @return NFO XML content as String, or null if generation fails
-     */
-    public static String generateMovieNfo(MovieItem movie) {
-        try {
-            MovieNfo nfo = buildMovieNfo(movie);
-            return XmlUtils.getXmlMapper().writeValueAsString(nfo);
-        } catch (JsonProcessingException e) {
-            log.error("Failed to generate movie NFO", e);
-            return null;
-        }
-    }
-
-    /**
-     * Generate NFO file for a movie with domain validation
-     *
-     * @param movie     The movie item from Xtream
-     * @param validator The domain validator to filter URLs
-     * @return NFO XML content as String, or null if generation fails
-     */
-    public static String generateMovieNfo(MovieItem movie, DomainValidator validator) {
-        try {
-            MovieNfo nfo = buildMovieNfo(movie, validator);
-            return XmlUtils.getXmlMapper().writeValueAsString(nfo);
-        } catch (JsonProcessingException e) {
-            log.error("Failed to generate movie NFO", e);
-            return null;
-        }
-    }
-
-    public static String generateMovieNfo(MovieItem movieItem, MovieDetails movieDetails) {
-        MovieNfo movieNfo = buildMovieNfo(movieDetails);
-        if (StringUtils.isBlank(movieNfo.getTrailer())) {
-            // Override trailer URL from MovieItem if not defined in MovieDetails
-            movieNfo.setTrailer(movieItem.getYoutubeTrailerUrl());
-        }
-        try {
-            return XmlUtils.getXmlMapper().writeValueAsString(movieNfo);
-        } catch (JsonProcessingException e) {
-            log.error("Failed to generate movie NFO", e);
             return null;
         }
     }
@@ -339,65 +259,6 @@ public class NfoGenerator {
         return builder.build();
     }
 
-    private static MovieNfo buildMovieNfo(MovieItem movie) {
-        MovieNfo.MovieNfoBuilder builder = MovieNfo.builder();
-
-        // Title
-        String name = movie.getName();
-        if (StringUtils.isNotBlank(name)) {
-            String cleanedTitle = cleanTitle(name);
-            builder.title(cleanedTitle);
-            builder.originalTitle(cleanedTitle);
-        }
-
-        // Rating
-        String rating = movie.getRating();
-        if (StringUtils.isNotBlank(rating)) {
-            try {
-                builder.userRating(Double.parseDouble(rating));
-            } catch (NumberFormatException e) {
-                log.debug("Failed to parse rating: {}", rating);
-            }
-        }
-
-        // Unique IDs
-        List<MovieNfo.UniqueId> uniqueIds = new ArrayList<>();
-
-        String tmdbId = movie.getTmdbId();
-        if (StringUtils.isNotBlank(tmdbId)) {
-            uniqueIds.add(MovieNfo.UniqueId.builder()
-                    .type("tmdb")
-                    .isDefault(true)
-                    .value(tmdbId)
-                    .build());
-        }
-
-        if (!uniqueIds.isEmpty()) {
-            builder.uniqueIds(uniqueIds);
-        }
-
-        // Trailer
-        String trailerUrl = movie.getYoutubeTrailerUrl();
-        if (StringUtils.isNotBlank(trailerUrl)) {
-            builder.trailer(trailerUrl);
-        }
-
-        // Thumbs (poster from stream_icon)
-        List<MovieNfo.Thumb> thumbs = new ArrayList<>();
-        String streamIcon = movie.getStreamIcon();
-        if (StringUtils.isNotBlank(streamIcon)) {
-            thumbs.add(MovieNfo.Thumb.builder()
-                    .aspect("poster")
-                    .url(streamIcon)
-                    .build());
-        }
-        if (!thumbs.isEmpty()) {
-            builder.thumbs(thumbs);
-        }
-
-        return builder.build();
-    }
-
     private static MovieNfo buildMovieNfo(MovieDetails movieDetails) {
         if (movieDetails == null || movieDetails.getInfo() == null) {
             return MovieNfo.builder().build();
@@ -548,23 +409,6 @@ public class NfoGenerator {
     }
 
     /**
-     * Generate NFO XML content for a season
-     *
-     * @param season The season metadata from Xtream
-     * @param tmdbId The TMDB ID for the series
-     * @return NFO XML content as String, or null if generation fails
-     */
-    public static String generateSeasonNfo(SeriesSeason season, String tmdbId) {
-        try {
-            SeasonNfo nfo = buildSeasonNfo(season, tmdbId);
-            return XmlUtils.getXmlMapper().writeValueAsString(nfo);
-        } catch (JsonProcessingException e) {
-            log.error("Failed to generate season NFO", e);
-            return null;
-        }
-    }
-
-    /**
      * Generate NFO XML content for a season with domain validation
      *
      * @param season    The season metadata from Xtream
@@ -588,11 +432,6 @@ public class NfoGenerator {
         // Title
         if (StringUtils.isNotBlank(season.getName())) {
             builder.title(season.getName());
-        }
-
-        // Plot/Overview
-        if (StringUtils.isNotBlank(season.getOverview())) {
-            builder.plot(season.getOverview());
         }
 
         // Season number
@@ -663,18 +502,6 @@ public class NfoGenerator {
         // Filter thumbs
         if (nfo.getThumbs() != null) {
             List<EpisodeNfo.Thumb> filteredThumbs = filterEpisodeThumbs(nfo.getThumbs(), validator);
-            nfo.setThumbs(filteredThumbs.isEmpty() ? null : filteredThumbs);
-        }
-
-        return nfo;
-    }
-
-    private static MovieNfo buildMovieNfo(MovieItem movie, DomainValidator validator) {
-        MovieNfo nfo = buildMovieNfo(movie);
-
-        // Filter thumbs (trailers are NOT validated)
-        if (nfo.getThumbs() != null) {
-            List<MovieNfo.Thumb> filteredThumbs = filterMovieThumbs(nfo.getThumbs(), validator);
             nfo.setThumbs(filteredThumbs.isEmpty() ? null : filteredThumbs);
         }
 

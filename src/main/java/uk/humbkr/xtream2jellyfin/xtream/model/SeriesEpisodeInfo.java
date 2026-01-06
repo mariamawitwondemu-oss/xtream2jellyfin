@@ -8,7 +8,7 @@ public class SeriesEpisodeInfo {
 
     private Integer id;
 
-    @JsonProperty("releasedate")
+    @JsonProperty("air_date")
     private String releaseDate;
 
     @JsonProperty("movie_image")

@@ -161,11 +161,4 @@ public class SeriesStreamsHandler extends BaseStreamsHandler {
         }
     }
 
-    private String extractYearFromDate(String date) {
-        if (date != null && date.length() >= 4) {
-            return date.substring(0, 4);
-        }
-        return null;
-    }
-
 }

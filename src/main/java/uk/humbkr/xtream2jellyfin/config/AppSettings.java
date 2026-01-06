@@ -3,7 +3,6 @@ package uk.humbkr.xtream2jellyfin.config;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Data
@@ -34,6 +33,6 @@ public class AppSettings {
     private int domainValidationFailureThreshold = 3;
 
     @JsonProperty("domain_validation_whitelist")
-    private List<String> domainValidationWhitelist = Arrays.asList("image.tmdb.org");
+    private List<String> domainValidationWhitelist = List.of("image.tmdb.org");
 
 }
