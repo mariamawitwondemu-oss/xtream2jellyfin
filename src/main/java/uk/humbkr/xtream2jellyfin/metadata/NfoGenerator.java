@@ -120,10 +120,10 @@ public class NfoGenerator {
             builder.uniqueIds(uniqueIds);
         }
 
-        // Genres
+        // Genres (split by comma or slash)
         String genre = info.getGenre();
         if (StringUtils.isNotBlank(genre)) {
-            List<String> genres = Arrays.stream(RegexUtils.split(genre, "/"))
+            List<String> genres = Arrays.stream(RegexUtils.split(genre, "[,/]"))
                     .map(String::trim)
                     .filter(StringUtils::isNotBlank)
                     .collect(Collectors.toList());
@@ -326,10 +326,10 @@ public class NfoGenerator {
             builder.uniqueIds(uniqueIds);
         }
 
-        // Genres
+        // Genres (split by comma or slash)
         String genre = info.getGenre();
         if (StringUtils.isNotBlank(genre)) {
-            List<String> genres = Arrays.stream(RegexUtils.split(genre, "/"))
+            List<String> genres = Arrays.stream(RegexUtils.split(genre, "[,/]"))
                     .map(String::trim)
                     .filter(StringUtils::isNotBlank)
                     .collect(Collectors.toList());
