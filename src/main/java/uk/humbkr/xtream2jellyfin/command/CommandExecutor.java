@@ -43,14 +43,39 @@ public class CommandExecutor {
             System.exit(1);
         }
 
+        boolean foundEnabledProvider = false;
         for (Map.Entry<String, XtreamProviderConfig> entry : appConfig.getProviders().entrySet()) {
             String providerName = entry.getKey();
             XtreamProviderConfig providerConfig = entry.getValue();
 
+            if (!providerConfig.isEnabled()) {
+                log.debug("Skipping disabled provider: {}", providerName);
+                continue;
+            }
+
+            if (!isMediaTypeEnabled(providerConfig, mediaType)) {
+                log.debug("Skipping provider {} - {} is disabled", providerName, mediaType);
+                continue;
+            }
+
+            foundEnabledProvider = true;
             System.out.println("\nProvider: " + providerName);
             ListCategoriesCommand command = new ListCategoriesCommand(providerConfig);
             command.execute(mediaType);
         }
+
+        if (!foundEnabledProvider) {
+            System.err.println("Error: No enabled providers found for " + mediaType + " categories");
+            System.exit(1);
+        }
+    }
+
+    private boolean isMediaTypeEnabled(XtreamProviderConfig providerConfig, MediaType mediaType) {
+        return switch (mediaType) {
+            case SERIES -> providerConfig.getSeriesSettings() != null && providerConfig.getSeriesSettings().isEnabled();
+            case MOVIE -> providerConfig.getMoviesSettings() != null && providerConfig.getMoviesSettings().isEnabled();
+            case LIVE -> providerConfig.getLiveSettings() != null && providerConfig.getLiveSettings().isEnabled();
+        };
     }
 
     private void printUsage() {
