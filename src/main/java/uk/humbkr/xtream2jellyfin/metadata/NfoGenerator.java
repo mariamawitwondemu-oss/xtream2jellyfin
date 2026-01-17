@@ -242,6 +242,10 @@ public class NfoGenerator {
                 builder.userRating(rating);
             }
 
+            // Plot
+            String plot = info.getPlot();
+            builder.plot(plot);
+
             // Thumbs - episode screenshot/poster
             List<EpisodeNfo.Thumb> thumbs = new ArrayList<>();
             String movieImage = info.getMovieImage();
@@ -254,6 +258,7 @@ public class NfoGenerator {
             if (!thumbs.isEmpty()) {
                 builder.thumbs(thumbs);
             }
+
         }
 
         return builder.build();

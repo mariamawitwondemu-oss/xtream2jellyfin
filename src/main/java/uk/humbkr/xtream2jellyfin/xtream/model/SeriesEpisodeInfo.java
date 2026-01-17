@@ -6,13 +6,15 @@ import lombok.Data;
 @Data
 public class SeriesEpisodeInfo {
 
-    private Integer id;
-
-    @JsonProperty("air_date")
-    private String releaseDate;
-
     @JsonProperty("movie_image")
     private String movieImage;
+
+    private String plot;
+
+    private Double rating;
+
+    @JsonProperty("releasedate")
+    private String releaseDate;
 
     @JsonProperty("duration_secs")
     private Integer durationSecs;
@@ -24,7 +26,5 @@ public class SeriesEpisodeInfo {
     private Object audio;
 
     private Integer bitrate;
-
-    private Double rating;
 
 }
