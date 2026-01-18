@@ -97,14 +97,14 @@ public class NfoGenerator {
         }
 
         // Rating
-        String rating = info.getRating();
-        if (StringUtils.isNotBlank(rating)) {
-            try {
-                builder.userRating(Double.parseDouble(rating));
-            } catch (NumberFormatException e) {
-                log.debug("Failed to parse rating: {}", rating);
-            }
-        }
+//        String rating = info.getRating();
+//        if (StringUtils.isNotBlank(rating)) {
+//            try {
+//                builder.userRating(Double.parseDouble(rating));
+//            } catch (NumberFormatException e) {
+//                log.debug("Failed to parse rating: {}", rating);
+//            }
+//        }
 
         // Unique IDs
         List<TvShowNfo.UniqueId> uniqueIds = new ArrayList<>();
@@ -237,10 +237,10 @@ public class NfoGenerator {
             }
 
             // Rating
-            Double rating = info.getRating();
-            if (rating != null) {
-                builder.userRating(rating);
-            }
+//            Double rating = info.getRating();
+//            if (rating != null) {
+//                builder.userRating(rating);
+//            }
 
             // Plot
             String plot = info.getPlot();
@@ -306,14 +306,14 @@ public class NfoGenerator {
         }
 
         // Rating
-        String rating = info.getRating();
-        if (StringUtils.isNotBlank(rating)) {
-            try {
-                builder.userRating(Double.parseDouble(rating));
-            } catch (NumberFormatException e) {
-                log.debug("Failed to parse rating: {}", rating);
-            }
-        }
+//        String rating = info.getRating();
+//        if (StringUtils.isNotBlank(rating)) {
+//            try {
+//                builder.userRating(Double.parseDouble(rating));
+//            } catch (NumberFormatException e) {
+//                log.debug("Failed to parse rating: {}", rating);
+//            }
+//        }
 
         // Unique IDs
         List<MovieNfo.UniqueId> uniqueIds = new ArrayList<>();
