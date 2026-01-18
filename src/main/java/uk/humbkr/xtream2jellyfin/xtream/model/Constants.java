@@ -56,6 +56,6 @@ public class Constants {
 
     // Various Constants
 
-    public static final String YOUTUBE_VIDEO_URL = "https://www.youtube.com/watch?v=";
+    public static final String YOUTUBE_VIDEO_URL = "plugin://plugin.video.youtube/play/?video_id=";
 
 }
