@@ -38,6 +38,10 @@ public class TvShowNfo {
     @JacksonXmlElementWrapper(useWrapping = false)
     private List<String> genres;
 
+    @JacksonXmlProperty(localName = "studio")
+    @JacksonXmlElementWrapper(useWrapping = false)
+    private List<String> studio;
+
     @JacksonXmlProperty(localName = "actor")
     @JacksonXmlElementWrapper(useWrapping = false)
     private List<Actor> actors;
