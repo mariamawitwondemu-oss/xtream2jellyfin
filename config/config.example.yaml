@@ -43,12 +43,16 @@ providers:
       "\\s*\\[.*\\]$": ""  # Remove trailing brackets
 
     # Optional: Jellyfin library refresh after sync
+    # Library IDs can be found via API: GET /Library/VirtualFolders with header X-Emby-Token
+    # Each library in the response has an ItemId field - use that as the library ID
     libraryRefresh:
       enabled: true
       protocol: "http"
       hostname: "localhost"
       port: 8096
       token: "your_jellyfin_api_token"
+      moviesLibraryId: "your_movies_library_id"
+      seriesLibraryId: "your_series_library_id"
 
     settings:
       live:

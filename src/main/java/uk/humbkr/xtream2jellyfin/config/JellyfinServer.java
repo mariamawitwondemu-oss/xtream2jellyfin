@@ -5,6 +5,8 @@ import lombok.Data;
 @Data
 public class JellyfinServer {
 
+    private boolean enabled = true;
+
     private String protocol;
 
     private String hostname;
@@ -12,5 +14,13 @@ public class JellyfinServer {
     private int port;
 
     private String token;
+
+    private String moviesLibraryId;
+
+    private String seriesLibraryId;
+
+    public String getBaseUrl() {
+        return protocol + "://" + hostname + ":" + port;
+    }
 
 }

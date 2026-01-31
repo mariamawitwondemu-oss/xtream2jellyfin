@@ -200,10 +200,7 @@ public abstract class BaseStreamsHandler {
                 updateCounters();
             }
             streamsIterator.remove();
-//            if (streamProcessed == 100) {
-//                log.debug("Processed 100 streams, skipping");
-//                break;
-//            }
+
         }
 
         // Clear the entire list to release all references

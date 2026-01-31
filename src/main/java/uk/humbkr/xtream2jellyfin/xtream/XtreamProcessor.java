@@ -5,10 +5,12 @@ import lombok.extern.slf4j.Slf4j;
 import uk.humbkr.xtream2jellyfin.common.StringUtils;
 import uk.humbkr.xtream2jellyfin.config.AppSettings;
 import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
+import uk.humbkr.xtream2jellyfin.config.JellyfinServer;
 import uk.humbkr.xtream2jellyfin.filemanager.CachedFileManager;
 import uk.humbkr.xtream2jellyfin.filemanager.FileManager;
 import uk.humbkr.xtream2jellyfin.filemanager.SimpleFileManager;
 import uk.humbkr.xtream2jellyfin.http.ConfigurableHttpClient;
+import uk.humbkr.xtream2jellyfin.jellyfin.JellyfinClient;
 import uk.humbkr.xtream2jellyfin.validation.DomainValidator;
 import uk.humbkr.xtream2jellyfin.xtream.model.Endpoint;
 import uk.humbkr.xtream2jellyfin.xtream.model.Profile;
@@ -37,6 +39,8 @@ public class XtreamProcessor implements AutoCloseable {
 
     private final DomainValidator domainValidator;
 
+    private final JellyfinClient jellyfinClient;
+
     private final List<BaseStreamsHandler> streamHandlers = new ArrayList<>(3);
 
     public XtreamProcessor(@NonNull AppSettings appSettings, @NonNull XtreamProviderConfig providerConfig) {
@@ -51,6 +55,9 @@ public class XtreamProcessor implements AutoCloseable {
 
         // Create domain validator
         this.domainValidator = createDomainValidator(appSettings);
+
+        // Create Jellyfin client for library refresh
+        this.jellyfinClient = createJellyfinClient(providerConfig.getLibraryRefresh());
 
         if (providerConfig.getLiveSettings().isEnabled()) {
             streamHandlers.add(new LiveStreamsHandler(providerConfig, fileManager, appSettings, httpClient, domainValidator));
@@ -90,6 +97,16 @@ public class XtreamProcessor implements AutoCloseable {
         return new DomainValidator(cacheDir, timeout, failureThreshold, whitelist);
     }
 
+    private JellyfinClient createJellyfinClient(JellyfinServer config) {
+        if (config == null || !config.isEnabled()) {
+            log.info("Jellyfin library refresh is disabled");
+            return null;
+        }
+
+        log.info("Jellyfin library refresh enabled (server: {})", config.getBaseUrl());
+        return new JellyfinClient(config);
+    }
+
     public void run() {
 
         if (!this.checkBeforeProcessing()) {
@@ -112,6 +129,8 @@ public class XtreamProcessor implements AutoCloseable {
             fileManager.onProcessEnd();
 
             reportBlacklistedDomains();
+
+            refreshJellyfinLibraries();
 
             log.info("{} processing completed", providerName);
 
@@ -190,34 +209,18 @@ public class XtreamProcessor implements AutoCloseable {
         }
     }
 
-    private void postProcessing() {
-//        if (postProcessingEnabled) {
-//            String url = postProcessingUrl + "/Library/Refresh";
-//            String serverDetails = "Jellyfin Server: " + postProcessingUrl;
-//
-//            try {
-//                HttpRequest request = HttpRequest.newBuilder()
-//                        .uri(URI.create(url))
-//                        .header("X-Jellyfin-Token", jellyfinToken)
-//                        .timeout(Duration.ofSeconds(30))
-//                        .POST(HttpRequest.BodyPublishers.noBody())
-//                        .build();
-//
-//                HttpResponse<String> response = httpClient.send(
-//                        request,
-//                        HttpResponse.BodyHandlers.ofString()
-//                );
-//
-//                if (response.statusCode() >= 200 && response.statusCode() < 300) {
-//                    log.info("Refresh library triggered, {}", serverDetails);
-//                } else {
-//                    log.error("Refresh library failed to trigger, {}, Error: {}",
-//                            serverDetails, response.statusCode());
-//                }
-//            } catch (Exception e) {
-//                log.error("Failed to trigger library refresh: {}", serverDetails, e);
-//            }
-//        }
+    private void refreshJellyfinLibraries() {
+        if (jellyfinClient == null) {
+            return;
+        }
+
+        if (providerConfig.getMoviesSettings() != null && providerConfig.getMoviesSettings().isEnabled()) {
+            jellyfinClient.refreshMoviesLibrary();
+        }
+
+        if (providerConfig.getSeriesSettings() != null && providerConfig.getSeriesSettings().isEnabled()) {
+            jellyfinClient.refreshSeriesLibrary();
+        }
     }
 
     private void reportBlacklistedDomains() {
