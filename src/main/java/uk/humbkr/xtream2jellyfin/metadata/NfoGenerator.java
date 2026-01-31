@@ -377,6 +377,38 @@ public class NfoGenerator {
             builder.runtime(durationSecs / 60); // Convert seconds to minutes
         }
 
+        // Thumbs
+        List<MovieNfo.Thumb> thumbs = new ArrayList<>();
+
+        // Add poster from cover or movie image
+        String cover = info.getCoverBig();
+        if (StringUtils.isBlank(cover)) {
+            cover = info.getMovieImage();
+        }
+        if (StringUtils.isNotBlank(cover)) {
+            thumbs.add(MovieNfo.Thumb.builder()
+                    .aspect("poster")
+                    .url(cover)
+                    .build());
+        }
+
+        // Add fanart from backdrop_path
+        List<String> backdropPaths = info.getBackdropPath();
+        if (backdropPaths != null && !backdropPaths.isEmpty()) {
+            for (String backdropUrl : backdropPaths) {
+                if (StringUtils.isNotBlank(backdropUrl)) {
+                    thumbs.add(MovieNfo.Thumb.builder()
+                            .aspect("fanart")
+                            .url(backdropUrl)
+                            .build());
+                }
+            }
+        }
+
+        if (!thumbs.isEmpty()) {
+            builder.thumbs(thumbs);
+        }
+
         return builder.build();
     }
 
