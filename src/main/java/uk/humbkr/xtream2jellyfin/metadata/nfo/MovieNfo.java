@@ -3,6 +3,7 @@ package uk.humbkr.xtream2jellyfin.metadata.nfo;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlText;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -74,7 +75,7 @@ public class MovieNfo {
         @JacksonXmlProperty(isAttribute = true, localName = "aspect")
         private String aspect;
 
-        @JacksonXmlProperty
+        @JacksonXmlText
         private String url;
 
     }
