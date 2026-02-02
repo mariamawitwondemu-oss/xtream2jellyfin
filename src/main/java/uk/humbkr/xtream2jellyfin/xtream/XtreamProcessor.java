@@ -113,36 +113,43 @@ public class XtreamProcessor implements AutoCloseable {
             return;
         }
 
-        log.info("[{}] Processing", providerName);
+        do {
+            log.info("[{}] Processing", providerName);
 
-        if (!this.authenticate()) {
-            log.error("[{}] Authentication failed, please check your credentials", providerName);
-            return;
-        }
-
-        try {
-
-            fileManager.onProcessStart();
-
-            streamHandlers.forEach(BaseStreamsHandler::process);
-
-            fileManager.onProcessEnd();
-
-            reportBlacklistedDomains();
-
-            refreshJellyfinLibraries();
-
-            log.info("{} processing completed", providerName);
-
-        } catch (Exception ex) {
-            if (ex.getMessage().contains("Authentication failed")) {
-                log.error("Failed to start processing, Provider: {}, Error: Invalid Credentials", providerName);
-            } else {
-                log.error("Failed to start processing, Provider: {}, Error: {}", providerName, ex.getMessage(), ex);
+            if (!this.authenticate()) {
+                log.error("[{}] Authentication failed, please check your credentials", providerName);
+                return;
             }
-        }
 
-        waitForNextIteration();
+            try {
+
+                fileManager.onProcessStart();
+
+                streamHandlers.forEach(BaseStreamsHandler::process);
+
+                fileManager.onProcessEnd();
+
+                reportBlacklistedDomains();
+
+                refreshJellyfinLibraries();
+
+                log.info("{} processing completed", providerName);
+
+            } catch (Exception ex) {
+                if (ex.getMessage().contains("Authentication failed")) {
+                    log.error("Failed to start processing, Provider: {}, Error: Invalid Credentials", providerName);
+                } else {
+                    log.error("Failed to start processing, Provider: {}, Error: {}", providerName, ex.getMessage(), ex);
+                }
+            }
+
+            if (providerConfig.getScanIntervalMinutes() <= 0) {
+                log.info("[{}] Scheduling is disabled (scan_interval_minutes: {}), exiting", providerName, providerConfig.getScanIntervalMinutes());
+                break;
+            }
+
+            waitForNextIteration();
+        } while (!Thread.currentThread().isInterrupted());
     }
 
     private boolean checkBeforeProcessing() {
