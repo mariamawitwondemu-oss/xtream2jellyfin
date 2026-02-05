@@ -92,7 +92,7 @@ public class MovieNfo {
         @JacksonXmlProperty(isAttribute = true, localName = "default")
         private Boolean isDefault;
 
-        @JacksonXmlProperty
+        @JacksonXmlText
         private String value;
 
     }

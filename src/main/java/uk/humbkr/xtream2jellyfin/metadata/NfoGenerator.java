@@ -572,37 +572,41 @@ public class NfoGenerator {
     // ========== Helper methods to filter thumbs ==========
 
     private static List<TvShowNfo.Thumb> filterTvShowThumbs(List<TvShowNfo.Thumb> thumbs, DomainValidator validator) {
-        if (validator == null || thumbs == null) {
+        if (thumbs == null) {
             return thumbs;
         }
         return thumbs.stream()
+                .filter(t -> UrlFilterUtils.isCompleteImageUrl(t.getUrl()))
                 .filter(t -> UrlFilterUtils.isUrlWithValidDomain(t.getUrl(), validator))
                 .collect(Collectors.toList());
     }
 
     private static List<EpisodeNfo.Thumb> filterEpisodeThumbs(List<EpisodeNfo.Thumb> thumbs, DomainValidator validator) {
-        if (validator == null || thumbs == null) {
+        if (thumbs == null) {
             return thumbs;
         }
         return thumbs.stream()
+                .filter(t -> UrlFilterUtils.isCompleteImageUrl(t.getUrl()))
                 .filter(t -> UrlFilterUtils.isUrlWithValidDomain(t.getUrl(), validator))
                 .collect(Collectors.toList());
     }
 
     private static List<MovieNfo.Thumb> filterMovieThumbs(List<MovieNfo.Thumb> thumbs, DomainValidator validator) {
-        if (validator == null || thumbs == null) {
+        if (thumbs == null) {
             return thumbs;
         }
         return thumbs.stream()
+                .filter(t -> UrlFilterUtils.isCompleteImageUrl(t.getUrl()))
                 .filter(t -> UrlFilterUtils.isUrlWithValidDomain(t.getUrl(), validator))
                 .collect(Collectors.toList());
     }
 
     private static List<SeasonNfo.Thumb> filterSeasonThumbs(List<SeasonNfo.Thumb> thumbs, DomainValidator validator) {
-        if (validator == null || thumbs == null) {
+        if (thumbs == null) {
             return thumbs;
         }
         return thumbs.stream()
+                .filter(t -> UrlFilterUtils.isCompleteImageUrl(t.getUrl()))
                 .filter(t -> UrlFilterUtils.isUrlWithValidDomain(t.getUrl(), validator))
                 .collect(Collectors.toList());
     }

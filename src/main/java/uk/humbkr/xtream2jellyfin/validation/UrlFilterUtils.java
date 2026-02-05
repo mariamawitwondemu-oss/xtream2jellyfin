@@ -57,6 +57,31 @@ public class UrlFilterUtils {
     }
 
     /**
+     * Check if URL points to an actual image file (not just a base CDN path).
+     * Rejects incomplete URLs like "https://image.tmdb.org/t/p/w1280" that are missing
+     * the image filename.
+     */
+    public static boolean isCompleteImageUrl(String url) {
+        if (!isValidUrl(url)) {
+            return false;
+        }
+
+        try {
+            URI uri = new URI(url);
+            String path = uri.getPath();
+            if (path == null || path.isEmpty() || path.equals("/")) {
+                return false;
+            }
+
+            // Last path segment must contain a dot (file extension)
+            String lastSegment = path.substring(path.lastIndexOf('/') + 1);
+            return lastSegment.contains(".");
+        } catch (URISyntaxException e) {
+            return false;
+        }
+    }
+
+    /**
      * Combined validation: check URL format and domain validity
      *
      * @param url       The URL to validate
