@@ -2,6 +2,7 @@ package uk.humbkr.xtream2jellyfin.command;
 
 import lombok.extern.slf4j.Slf4j;
 import uk.humbkr.xtream2jellyfin.config.AppConfig;
+import uk.humbkr.xtream2jellyfin.config.AppSettings;
 import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
 import uk.humbkr.xtream2jellyfin.xtream.model.MediaType;
 
@@ -28,6 +29,9 @@ public class CommandExecutor {
             case "get-series-categories" -> listCategories(MediaType.SERIES);
             case "get-movies-categories" -> listCategories(MediaType.MOVIE);
             case "get-live-categories" -> listCategories(MediaType.LIVE);
+            case "import-movies" -> importMedia(MediaType.MOVIE);
+            case "import-series" -> importMedia(MediaType.SERIES);
+            case "import-live" -> importMedia(MediaType.LIVE);
             default -> {
                 System.err.println("Unknown command: " + command);
                 printUsage();
@@ -70,6 +74,37 @@ public class CommandExecutor {
         }
     }
 
+    private void importMedia(MediaType mediaType) {
+        if (appConfig.getProviders().isEmpty()) {
+            log.error("No providers configured");
+            System.err.println("Error: No providers found in configuration file");
+            System.exit(1);
+        }
+
+        AppSettings appSettings = appConfig.getAppSettings();
+        boolean foundEnabledProvider = false;
+
+        for (Map.Entry<String, XtreamProviderConfig> entry : appConfig.getProviders().entrySet()) {
+            String providerName = entry.getKey();
+            XtreamProviderConfig providerConfig = entry.getValue();
+
+            if (!providerConfig.isEnabled()) {
+                log.debug("Skipping disabled provider: {}", providerName);
+                continue;
+            }
+
+            foundEnabledProvider = true;
+            log.info("Importing {} for provider: {}", mediaType, providerName);
+            ImportCommand command = new ImportCommand(appSettings, providerConfig);
+            command.execute(mediaType);
+        }
+
+        if (!foundEnabledProvider) {
+            System.err.println("Error: No enabled providers found");
+            System.exit(1);
+        }
+    }
+
     private boolean isMediaTypeEnabled(XtreamProviderConfig providerConfig, MediaType mediaType) {
         return switch (mediaType) {
             case SERIES -> providerConfig.getSeriesSettings() != null && providerConfig.getSeriesSettings().isEnabled();
@@ -84,6 +119,9 @@ public class CommandExecutor {
         System.out.println("  java -jar xtream2jellyfin.jar get-series-categories   - List series categories");
         System.out.println("  java -jar xtream2jellyfin.jar get-movies-categories   - List movies categories");
         System.out.println("  java -jar xtream2jellyfin.jar get-live-categories     - List live categories");
+        System.out.println("  java -jar xtream2jellyfin.jar import-movies           - Import movies only (one-shot)");
+        System.out.println("  java -jar xtream2jellyfin.jar import-series           - Import series only (one-shot)");
+        System.out.println("  java -jar xtream2jellyfin.jar import-live             - Import live only (one-shot)");
     }
 
 }
