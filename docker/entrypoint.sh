@@ -15,5 +15,9 @@ for dir in /app/config /app/cache /app/media; do
   fi
 done
 
-# Execute the command as the java user
+# If the first argument is not "java", treat it as an app command
+if [ "$1" != "java" ]; then
+  exec gosu java java -jar /app/xtream2jellyfin.jar "$@"
+fi
+
 exec gosu java "$@"
