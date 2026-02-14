@@ -93,6 +93,15 @@ docker run --rm -v ... ghcr.io/humbkr/xtream2jellyfin get-movies-categories
 
 # List available series categories
 docker run --rm -v ... ghcr.io/humbkr/xtream2jellyfin get-series-categories
+
+# Trigger a Jellyfin library refresh (movies + series)
+docker run --rm -v ... ghcr.io/humbkr/xtream2jellyfin refresh-jellyfin
+
+# Refresh movies library only
+docker run --rm -v ... ghcr.io/humbkr/xtream2jellyfin refresh-jellyfin-movies
+
+# Refresh series library only
+docker run --rm -v ... ghcr.io/humbkr/xtream2jellyfin refresh-jellyfin-series
 ```
 
 ## Jellyfin library refresh

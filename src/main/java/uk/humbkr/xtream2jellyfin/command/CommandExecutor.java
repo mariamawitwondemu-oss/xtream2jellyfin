@@ -32,6 +32,9 @@ public class CommandExecutor {
             case "import-movies" -> importMedia(MediaType.MOVIE);
             case "import-series" -> importMedia(MediaType.SERIES);
             case "import-live" -> importMedia(MediaType.LIVE);
+            case "refresh-jellyfin" -> refreshJellyfin(null);
+            case "refresh-jellyfin-movies" -> refreshJellyfin(MediaType.MOVIE);
+            case "refresh-jellyfin-series" -> refreshJellyfin(MediaType.SERIES);
             default -> {
                 System.err.println("Unknown command: " + command);
                 printUsage();
@@ -105,6 +108,40 @@ public class CommandExecutor {
         }
     }
 
+    private void refreshJellyfin(MediaType mediaType) {
+        if (appConfig.getProviders().isEmpty()) {
+            log.error("No providers configured");
+            System.err.println("Error: No providers found in configuration file");
+            System.exit(1);
+        }
+
+        boolean foundEnabledProvider = false;
+        for (Map.Entry<String, XtreamProviderConfig> entry : appConfig.getProviders().entrySet()) {
+            String providerName = entry.getKey();
+            XtreamProviderConfig providerConfig = entry.getValue();
+
+            if (!providerConfig.isEnabled()) {
+                log.debug("Skipping disabled provider: {}", providerName);
+                continue;
+            }
+
+            if (providerConfig.getLibraryRefresh() == null) {
+                log.warn("Provider {} has no libraryRefresh configured, skipping", providerName);
+                continue;
+            }
+
+            foundEnabledProvider = true;
+            log.info("Refreshing Jellyfin libraries for provider: {}", providerName);
+            RefreshJellyfinCommand command = new RefreshJellyfinCommand(providerConfig);
+            command.execute(mediaType);
+        }
+
+        if (!foundEnabledProvider) {
+            System.err.println("Error: No enabled providers with libraryRefresh configured");
+            System.exit(1);
+        }
+    }
+
     private boolean isMediaTypeEnabled(XtreamProviderConfig providerConfig, MediaType mediaType) {
         return switch (mediaType) {
             case SERIES -> providerConfig.getSeriesSettings() != null && providerConfig.getSeriesSettings().isEnabled();
@@ -122,6 +159,9 @@ public class CommandExecutor {
         System.out.println("  java -jar xtream2jellyfin.jar import-movies           - Import movies only (one-shot)");
         System.out.println("  java -jar xtream2jellyfin.jar import-series           - Import series only (one-shot)");
         System.out.println("  java -jar xtream2jellyfin.jar import-live             - Import live only (one-shot)");
+        System.out.println("  java -jar xtream2jellyfin.jar refresh-jellyfin        - Refresh movies and series Jellyfin libraries");
+        System.out.println("  java -jar xtream2jellyfin.jar refresh-jellyfin-movies - Refresh movies Jellyfin library only");
+        System.out.println("  java -jar xtream2jellyfin.jar refresh-jellyfin-series - Refresh series Jellyfin library only");
     }
 
 }
