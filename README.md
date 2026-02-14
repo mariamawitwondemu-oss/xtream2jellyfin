@@ -63,7 +63,7 @@ docker run -d \
   -v $(pwd)/cache:/app/cache \
   -e PUID=$(id -u) \
   -e PGID=$(id -g) \
-  ghcr.io/humbkr/xtream2jellyfin:latest
+  ghcr.io/mishka81/xtream2jellyfin:latest
 ```
 
 The application syncs all configured providers every 6 hours by default.
@@ -83,25 +83,25 @@ One-off commands are available instead of the default continuous sync:
 
 ```bash
 # Import only movies (one-shot, then exit)
-docker run --rm -v ... ghcr.io/humbkr/xtream2jellyfin import-movies
+docker run --rm -v ... ghcr.io/mishka81/xtream2jellyfin import-movies
 
 # Import only series
-docker run --rm -v ... ghcr.io/humbkr/xtream2jellyfin import-series
+docker run --rm -v ... ghcr.io/mishka81/xtream2jellyfin import-series
 
 # List available movie categories (useful for filtering)
-docker run --rm -v ... ghcr.io/humbkr/xtream2jellyfin get-movies-categories
+docker run --rm -v ... ghcr.io/mishka81/xtream2jellyfin get-movies-categories
 
 # List available series categories
-docker run --rm -v ... ghcr.io/humbkr/xtream2jellyfin get-series-categories
+docker run --rm -v ... ghcr.io/mishka81/xtream2jellyfin get-series-categories
 
 # Trigger a Jellyfin library refresh (movies + series)
-docker run --rm -v ... ghcr.io/humbkr/xtream2jellyfin refresh-jellyfin
+docker run --rm -v ... ghcr.io/mishka81/xtream2jellyfin refresh-jellyfin
 
 # Refresh movies library only
-docker run --rm -v ... ghcr.io/humbkr/xtream2jellyfin refresh-jellyfin-movies
+docker run --rm -v ... ghcr.io/mishka81/xtream2jellyfin refresh-jellyfin-movies
 
 # Refresh series library only
-docker run --rm -v ... ghcr.io/humbkr/xtream2jellyfin refresh-jellyfin-series
+docker run --rm -v ... ghcr.io/mishka81/xtream2jellyfin refresh-jellyfin-series
 ```
 
 ## Jellyfin library refresh

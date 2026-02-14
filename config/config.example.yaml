@@ -15,9 +15,7 @@ app:
   logging:
     level: "INFO"                    # Root log level: TRACE, DEBUG, INFO, WARN, ERROR
     loggers:
-      "io.prometheus": "WARN"
-      "uk.humbkr.xtream2jellyfin": "DEBUG"
-      "uk.humbkr.xtream2jellyfin.filemanager.CachedFileManager": "INFO"
+      "uk.humbkr.xtream2jellyfin": "INFO"
 
 providers:
   provider1:
