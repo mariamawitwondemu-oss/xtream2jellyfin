@@ -9,7 +9,7 @@ import java.util.List;
 public class AppSettings {
 
     @JsonProperty("file_manager_type")
-    private String fileManagerType = "simple";
+    private String fileManagerType = "cached";
 
     @JsonProperty("media_dir")
     private String mediaDir = "media";

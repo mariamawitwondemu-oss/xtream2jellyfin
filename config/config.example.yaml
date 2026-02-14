@@ -1,18 +1,15 @@
 app:
-  file_manager_type: "simple"
-  media_dir: "media"
-  write_metadata_json: false
-  write_metadata_nfo: true
+  # file_manager_type: "cached"   # "simple" or "cached" (default: "cached")
+  # media_dir: "media"            # base media output directory (default: "media")
+  # cache_dir: "cache"            # cache directory (default: "cache")
+  # write_metadata_nfo: true      # generate NFO metadata files (default: true)
 
-  # Domain validation configuration (speeds up Jellyfin library scans)
-  domain_validation_enabled: true
-  domain_validation_timeout_ms: 5000
-  domain_validation_failure_threshold: 3
-  domain_validation_whitelist:
-    - image.tmdb.org    # TMDB images (default, always valid)
-    # Add trusted domains below to skip validation (always considered valid)
-    # - cdn.example.com
-    # - images.yourprovider.com
+  # Domain validation filters invalid image URLs to speed up Jellyfin library scans (enabled by default)
+  # domain_validation_enabled: true
+  # domain_validation_timeout_ms: 5000
+  # domain_validation_failure_threshold: 3
+  # domain_validation_whitelist:
+  #   - image.tmdb.org
 
   # Logging configuration
   logging:
@@ -27,7 +24,7 @@ providers:
     username: "your_username"
     password: "your_password"
     url: "http://your-xtream-server.com"
-    interval: 360  # minutes
+    scan_interval_minutes: 360  # sync interval in minutes (default: 360)
 
     # HTTP client configuration
     http_client:
@@ -43,7 +40,7 @@ providers:
       "\\s*\\[.*\\]$": ""  # Remove trailing brackets
 
     # Optional: Jellyfin library refresh after sync
-    # Library IDs can be found via API: GET /Library/VirtualFolders with header X-Emby-Token
+    # Library IDs can be found via API: GET /Library/VirtualFolders with header Authorization: MediaBrowser Token=<token>
     # Each library in the response has an ItemId field - use that as the library ID
     libraryRefresh:
       enabled: true
@@ -65,9 +62,10 @@ providers:
           "^\\[.*\\]\\s*": ""
           "\\s*\\[.*\\]$": ""
 
-        # Category filtering (use IDs from provider)
-        include_category_ids: []  # If set, only these categories are processed
-        exclude_category_ids: []  # Ignored if include_category_ids is set
+        # Category filtering
+        # Use get-live-categories command to find IDs
+        include_category_ids: []  # if set, only these categories are processed
+        exclude_category_ids: []  # ignored if include_category_ids is set
 
       movies:
         enabled: true
@@ -79,8 +77,9 @@ providers:
           "^\\[.*\\]\\s*": ""
           "\\s*\\[.*\\]$": ""
 
-        include_category_ids: []
-        exclude_category_ids: []
+        # Category filtering (use get-movies-categories command to find IDs)
+        include_category_ids: []  # if set, only these categories are processed
+        exclude_category_ids: []  # ignored if include_category_ids is set
 
       series:
         enabled: true
@@ -92,5 +91,6 @@ providers:
           "^\\[.*\\]\\s*": ""
           "\\s*\\[.*\\]$": ""
 
-        include_category_ids: []
-        exclude_category_ids: []
+        # Category filtering (use get-series-categories command to find IDs)
+        include_category_ids: []  # if set, only these categories are processed
+        exclude_category_ids: []  # ignored if include_category_ids is set
