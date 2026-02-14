@@ -8,10 +8,12 @@ PGID=${PGID:-1000}
 groupmod -o -g "$PGID" java
 usermod -o -u "$PUID" java
 
-# Fix ownership of app directories (only files not already owned correctly)
+# Check that mounted volumes are writable by the configured user
 for dir in /app/config /app/cache /app/media; do
-  if [ -d "$dir" ]; then
-    find "$dir" \( ! -user "$PUID" -o ! -group "$PGID" \) -exec chown java:java {} +
+  if [ -d "$dir" ] && ! gosu java test -w "$dir"; then
+    echo "ERROR: $dir is not writable by user $PUID:$PGID"
+    echo "Fix the permissions on the host with: chown -R $PUID:$PGID $(realpath "$dir")"
+    exit 1
   fi
 done
 

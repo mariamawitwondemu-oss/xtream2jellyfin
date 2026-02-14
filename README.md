@@ -66,6 +66,8 @@ docker run -d \
   ghcr.io/mishka81/xtream2jellyfin:latest
 ```
 
+The mounted directories (`config`, `media`, `cache`) must be writable by the user specified via `PUID`/`PGID`. If permissions are incorrect, the container will exit with an error message showing the `chown` command to run.
+
 The application syncs all configured providers every 6 hours by default.
 
 ### 3. Add the library in Jellyfin
