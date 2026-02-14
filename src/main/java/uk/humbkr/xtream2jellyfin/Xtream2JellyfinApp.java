@@ -2,12 +2,11 @@ package uk.humbkr.xtream2jellyfin;
 
 import lombok.extern.slf4j.Slf4j;
 import uk.humbkr.xtream2jellyfin.command.CommandExecutor;
-import uk.humbkr.xtream2jellyfin.common.Constants;
-import uk.humbkr.xtream2jellyfin.common.YamlUtils;
 import uk.humbkr.xtream2jellyfin.config.AppConfig;
 import uk.humbkr.xtream2jellyfin.config.AppSettings;
 import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
 import uk.humbkr.xtream2jellyfin.logging.LogbackConfigurator;
+import uk.humbkr.xtream2jellyfin.utils.YamlUtils;
 import uk.humbkr.xtream2jellyfin.xtream.XtreamProcessor;
 
 import java.io.File;
@@ -17,6 +16,8 @@ import java.util.List;
 
 @Slf4j
 public class Xtream2JellyfinApp {
+
+    public static final String CONFIG_FILE = "config/config.yaml";
 
     public static void main(String[] args) {
         Xtream2JellyfinApp app = new Xtream2JellyfinApp();
@@ -65,7 +66,7 @@ public class Xtream2JellyfinApp {
     }
 
     private AppConfig readConfig() {
-        File configFile = new File(Constants.CONFIG_FILE);
+        File configFile = new File(CONFIG_FILE);
         if (configFile.exists()) {
             try {
                 return YamlUtils.getYamlMapper().readValue(configFile, AppConfig.class);
@@ -74,7 +75,7 @@ public class Xtream2JellyfinApp {
                 log.debug("", e);
             }
         }
-        log.error("Config file not found: {}", Constants.CONFIG_FILE);
+        log.error("Config file not found: {}", CONFIG_FILE);
         return new AppConfig();
     }
 

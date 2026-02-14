@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AccessLevel;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import uk.humbkr.xtream2jellyfin.common.JsonUtils;
+import uk.humbkr.xtream2jellyfin.utils.JsonUtils;
 
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public class BaseFileManager {

@@ -2,22 +2,20 @@ package uk.humbkr.xtream2jellyfin.xtream;
 
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import uk.humbkr.xtream2jellyfin.common.StringUtils;
 import uk.humbkr.xtream2jellyfin.config.AppSettings;
-import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
 import uk.humbkr.xtream2jellyfin.config.JellyfinServer;
+import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
 import uk.humbkr.xtream2jellyfin.filemanager.CachedFileManager;
 import uk.humbkr.xtream2jellyfin.filemanager.FileManager;
 import uk.humbkr.xtream2jellyfin.filemanager.SimpleFileManager;
 import uk.humbkr.xtream2jellyfin.http.ConfigurableHttpClient;
 import uk.humbkr.xtream2jellyfin.jellyfin.JellyfinClient;
+import uk.humbkr.xtream2jellyfin.utils.StringUtils;
 import uk.humbkr.xtream2jellyfin.validation.DomainValidator;
 import uk.humbkr.xtream2jellyfin.xtream.model.Endpoint;
 import uk.humbkr.xtream2jellyfin.xtream.model.Profile;
 import uk.humbkr.xtream2jellyfin.xtream.model.ServerInfo;
 import uk.humbkr.xtream2jellyfin.xtream.model.UserInfo;
-
-import java.util.Set;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -25,6 +23,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 public class XtreamProcessor implements AutoCloseable {

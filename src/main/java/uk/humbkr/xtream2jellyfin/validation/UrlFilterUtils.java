@@ -2,7 +2,7 @@ package uk.humbkr.xtream2jellyfin.validation;
 
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import uk.humbkr.xtream2jellyfin.common.StringUtils;
+import uk.humbkr.xtream2jellyfin.utils.StringUtils;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -99,4 +99,5 @@ public class UrlFilterUtils {
 
         return validator.isValidUrl(url);
     }
+
 }

@@ -3,7 +3,7 @@ package uk.humbkr.xtream2jellyfin.filemanager;
 import com.fasterxml.jackson.databind.type.MapType;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import uk.humbkr.xtream2jellyfin.common.JsonUtils;
+import uk.humbkr.xtream2jellyfin.utils.JsonUtils;
 
 import java.io.FileNotFoundException;
 import java.io.IOError;

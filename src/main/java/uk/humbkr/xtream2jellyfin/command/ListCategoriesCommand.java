@@ -3,9 +3,9 @@ package uk.humbkr.xtream2jellyfin.command;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import uk.humbkr.xtream2jellyfin.common.JsonUtils;
 import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
 import uk.humbkr.xtream2jellyfin.http.ConfigurableHttpClient;
+import uk.humbkr.xtream2jellyfin.utils.JsonUtils;
 import uk.humbkr.xtream2jellyfin.xtream.model.*;
 
 import java.io.IOException;

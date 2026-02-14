@@ -1,7 +1,7 @@
 package uk.humbkr.xtream2jellyfin.nameformat;
 
-import uk.humbkr.xtream2jellyfin.common.StringSubstitutor;
-import uk.humbkr.xtream2jellyfin.common.StringUtils;
+import uk.humbkr.xtream2jellyfin.utils.StringSubstitutor;
+import uk.humbkr.xtream2jellyfin.utils.StringUtils;
 
 import java.util.HashMap;
 import java.util.Map;

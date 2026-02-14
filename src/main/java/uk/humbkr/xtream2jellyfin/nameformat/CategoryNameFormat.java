@@ -1,6 +1,6 @@
 package uk.humbkr.xtream2jellyfin.nameformat;
 
-import uk.humbkr.xtream2jellyfin.common.StringUtils;
+import uk.humbkr.xtream2jellyfin.utils.StringUtils;
 
 import java.util.Map;
 

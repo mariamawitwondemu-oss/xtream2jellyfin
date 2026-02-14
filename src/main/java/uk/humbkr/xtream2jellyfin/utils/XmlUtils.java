@@ -1,4 +1,4 @@
-package uk.humbkr.xtream2jellyfin.common;
+package uk.humbkr.xtream2jellyfin.utils;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.SerializationFeature;

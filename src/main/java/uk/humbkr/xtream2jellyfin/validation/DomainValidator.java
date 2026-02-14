@@ -3,7 +3,7 @@ package uk.humbkr.xtream2jellyfin.validation;
 import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import uk.humbkr.xtream2jellyfin.common.JsonUtils;
+import uk.humbkr.xtream2jellyfin.utils.JsonUtils;
 
 import java.io.IOException;
 import java.net.URI;

@@ -3,7 +3,6 @@ package uk.humbkr.xtream2jellyfin.config;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
-import uk.humbkr.xtream2jellyfin.common.Constants;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,7 +22,7 @@ public class XtreamProviderConfig {
     private String password;
 
     @JsonProperty("scan_interval_minutes")
-    private int scanIntervalMinutes = Constants.DEFAULT_SCAN_INTERVAL;
+    private int scanIntervalMinutes = 360;
 
     @JsonProperty("category_name_cleanup_patterns")
     private Map<String, String> categoryNameCleanupPatterns = new HashMap<>();

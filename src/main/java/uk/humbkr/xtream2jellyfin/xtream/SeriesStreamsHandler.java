@@ -1,13 +1,13 @@
 package uk.humbkr.xtream2jellyfin.xtream;
 
 import lombok.extern.slf4j.Slf4j;
-import uk.humbkr.xtream2jellyfin.common.StringUtils;
 import uk.humbkr.xtream2jellyfin.config.AppSettings;
 import uk.humbkr.xtream2jellyfin.config.XtreamProviderConfig;
 import uk.humbkr.xtream2jellyfin.filemanager.FileManager;
 import uk.humbkr.xtream2jellyfin.http.ConfigurableHttpClient;
 import uk.humbkr.xtream2jellyfin.metadata.NfoGenerator;
 import uk.humbkr.xtream2jellyfin.nameformat.StreamNameFormatContext;
+import uk.humbkr.xtream2jellyfin.utils.StringUtils;
 import uk.humbkr.xtream2jellyfin.validation.DomainValidator;
 import uk.humbkr.xtream2jellyfin.xtream.model.*;
 
