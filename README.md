@@ -70,6 +70,28 @@ The mounted directories (`config`, `media`, `cache`) must be writable by the use
 
 The application syncs all configured providers every 6 hours by default.
 
+#### Docker Compose
+
+```yaml
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    # ...
+
+  xtream2jellyfin:
+    image: ghcr.io/mishka81/xtream2jellyfin:latest
+    container_name: xtream2jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+    volumes:
+      - /path/to/config:/app/config
+      - /path/to/cache:/app/cache
+      - /path/to/media:/app/media
+```
+
 ### 3. Add the library in Jellyfin
 
 1. In Jellyfin, go to **Dashboard > Libraries > Add Media Library**
