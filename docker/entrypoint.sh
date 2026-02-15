@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/bin/bash
+
+set -eo pipefail
 
 # Set default values if not provided
 PUID=${PUID:-1000}
