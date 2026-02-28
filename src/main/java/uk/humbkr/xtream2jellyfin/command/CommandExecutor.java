@@ -29,6 +29,9 @@ public class CommandExecutor {
             case "get-series-categories" -> listCategories(MediaType.SERIES);
             case "get-movies-categories" -> listCategories(MediaType.MOVIE);
             case "get-live-categories" -> listCategories(MediaType.LIVE);
+            case "count-series-streams" -> countStreams(MediaType.SERIES);
+            case "count-movies-streams" -> countStreams(MediaType.MOVIE);
+            case "count-live-streams" -> countStreams(MediaType.LIVE);
             case "import-movies" -> importMedia(MediaType.MOVIE);
             case "import-series" -> importMedia(MediaType.SERIES);
             case "import-live" -> importMedia(MediaType.LIVE);
@@ -73,6 +76,39 @@ public class CommandExecutor {
 
         if (!foundEnabledProvider) {
             System.err.println("Error: No enabled providers found for " + mediaType + " categories");
+            System.exit(1);
+        }
+    }
+
+    private void countStreams(MediaType mediaType) {
+        if (appConfig.getProviders().isEmpty()) {
+            log.error("No providers configured");
+            System.err.println("Error: No providers found in configuration file");
+            System.exit(1);
+        }
+
+        boolean foundEnabledProvider = false;
+        for (Map.Entry<String, XtreamProviderConfig> entry : appConfig.getProviders().entrySet()) {
+            String providerName = entry.getKey();
+            XtreamProviderConfig providerConfig = entry.getValue();
+
+            if (!providerConfig.isEnabled()) {
+                log.debug("Skipping disabled provider: {}", providerName);
+                continue;
+            }
+
+            if (!isMediaTypeEnabled(providerConfig, mediaType)) {
+                log.debug("Skipping provider {} - {} is disabled", providerName, mediaType);
+                continue;
+            }
+
+            foundEnabledProvider = true;
+            CountStreamsCommand command = new CountStreamsCommand(providerConfig);
+            command.execute(mediaType);
+        }
+
+        if (!foundEnabledProvider) {
+            System.err.println("Error: No enabled providers found for " + mediaType + " streams");
             System.exit(1);
         }
     }
@@ -156,6 +192,9 @@ public class CommandExecutor {
         System.out.println("  java -jar xtream2jellyfin.jar get-series-categories   - List series categories");
         System.out.println("  java -jar xtream2jellyfin.jar get-movies-categories   - List movies categories");
         System.out.println("  java -jar xtream2jellyfin.jar get-live-categories     - List live categories");
+        System.out.println("  java -jar xtream2jellyfin.jar count-series-streams    - Count series streams per category");
+        System.out.println("  java -jar xtream2jellyfin.jar count-movies-streams    - Count movies streams per category");
+        System.out.println("  java -jar xtream2jellyfin.jar count-live-streams      - Count live streams per category");
         System.out.println("  java -jar xtream2jellyfin.jar import-movies           - Import movies only (one-shot)");
         System.out.println("  java -jar xtream2jellyfin.jar import-series           - Import series only (one-shot)");
         System.out.println("  java -jar xtream2jellyfin.jar import-live             - Import live only (one-shot)");
