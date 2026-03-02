@@ -22,7 +22,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.*;
-
+import java.net.URI;
 public abstract class BaseStreamsHandler {
 
     protected final ObjectMapper objectMapper;
@@ -140,12 +140,32 @@ public abstract class BaseStreamsHandler {
         return (List<Category>) data.get(Constants.MEDIA_RESOLVER_CATEGORIES);
     }
 
+    //public void setProviderUrl(ServerInfo serverInfo) {
+    //    String url = serverInfo.getUrl();
+    //    String serverProtocol = serverInfo.getServerProtocol();
+    //    this.providerUrl = serverProtocol + "://" + url;
+    //}
+    
     public void setProviderUrl(ServerInfo serverInfo) {
-        String url = serverInfo.getUrl();
         String serverProtocol = serverInfo.getServerProtocol();
-        this.providerUrl = serverProtocol + "://" + url;
+        String serverHost = serverInfo.getUrl(); // often "host" without ":port"
+    
+        // Parse currently configured providerUrl to preserve an explicit port (if present)
+        int configuredPort = -1;
+        try {
+            URI configured = URI.create(this.providerUrl);
+            configuredPort = configured.getPort(); // -1 if none specified
+        } catch (Exception ignored) {
+            // If misconfigured, fall back to serverInfo
+        }
+    
+        // If serverInfo doesn't include a port but config did, keep the configured port
+        if (configuredPort != -1 && serverHost != null && !serverHost.contains(":")) {
+            serverHost = serverHost + ":" + configuredPort;
+        }
+    
+        this.providerUrl = serverProtocol + "://" + serverHost;
     }
-
     public void process() {
         try {
             processingStartTime = System.currentTimeMillis();
