@@ -22,7 +22,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.*;
-import java.net.URI;
+
 public abstract class BaseStreamsHandler {
 
     protected final ObjectMapper objectMapper;
@@ -110,6 +110,74 @@ public abstract class BaseStreamsHandler {
         this.categoryNameFormat = new CategoryNameFormat(this.categoryNameCleanupPatterns);
     }
 
+    /**
+     * Builds a provider base URL from ServerInfo.
+     * <p>
+     * The canonical Xtream Codes format has a bare hostname in the url field,
+     * with protocol and port in separate fields (server_protocol, port, https_port).
+     * Some providers put a full URL in the url field instead (e.g. "http://host:8080").
+     * Values extracted from the url field take precedence over the separate fields.
+     * <p>
+     * Returns an empty string if the url field is blank.
+     */
+    static String parseProviderUrl(ServerInfo serverInfo) {
+        String rawUrl = serverInfo.getUrl();
+
+        if (StringUtils.isBlank(rawUrl)) {
+            return "";
+        }
+
+        String resolvedProtocol = StringUtils.isNotBlank(serverInfo.getServerProtocol())
+                ? serverInfo.getServerProtocol()
+                : "http";
+        String resolvedHost = null;
+        int resolvedPort = -1;
+
+        // Prepend "//" if no scheme so URI can parse host and port from "host" or "host:port".
+        // If a scheme is present, parse as-is and extract it (non-standard but real).
+        boolean isFullUrl = rawUrl.contains("://");
+        String toParse = isFullUrl ? rawUrl : "//" + rawUrl;
+        try {
+            URI uri = URI.create(toParse);
+            resolvedHost = uri.getHost();
+            if (isFullUrl && uri.getScheme() != null) {
+                resolvedProtocol = uri.getScheme();
+            }
+            if (uri.getPort() > 0) {
+                resolvedPort = uri.getPort();
+            }
+        } catch (IllegalArgumentException ignored) {
+            // URI.create failed — fall through to field-based fallbacks below
+        }
+
+        // Safety net: if URI parsing failed to resolve a host, use the raw value as-is
+        if (StringUtils.isBlank(resolvedHost)) {
+            resolvedHost = rawUrl;
+        }
+
+        // Port: fall back to the protocol-specific port field only when url was a bare hostname.
+        // When url is a full URL, absence of port is intentional and the field is ignored.
+        if (resolvedPort <= 0 && !isFullUrl) {
+            String portStr = "https".equalsIgnoreCase(resolvedProtocol)
+                    ? serverInfo.getHttpsPort()
+                    : serverInfo.getPort();
+            if (StringUtils.isNotBlank(portStr)) {
+                try {
+                    resolvedPort = Integer.parseInt(portStr.trim());
+                } catch (NumberFormatException ignored) {
+                    // ignore non-numeric port value
+                }
+            }
+        }
+
+        StringBuilder url = new StringBuilder(resolvedProtocol).append("://").append(resolvedHost);
+        if (resolvedPort > 0) {
+            url.append(":").append(resolvedPort);
+        }
+
+        return url.toString();
+    }
+
     private MediaSettings getMediaSettingsForType(XtreamProviderConfig config) {
         return switch (this.getMediaType()) {
             case LIVE -> config.getLiveSettings();
@@ -140,32 +208,16 @@ public abstract class BaseStreamsHandler {
         return (List<Category>) data.get(Constants.MEDIA_RESOLVER_CATEGORIES);
     }
 
-    //public void setProviderUrl(ServerInfo serverInfo) {
-    //    String url = serverInfo.getUrl();
-    //    String serverProtocol = serverInfo.getServerProtocol();
-    //    this.providerUrl = serverProtocol + "://" + url;
-    //}
-    
     public void setProviderUrl(ServerInfo serverInfo) {
-        String serverProtocol = serverInfo.getServerProtocol();
-        String serverHost = serverInfo.getUrl(); // often "host" without ":port"
-    
-        // Parse currently configured providerUrl to preserve an explicit port (if present)
-        int configuredPort = -1;
-        try {
-            URI configured = URI.create(this.providerUrl);
-            configuredPort = configured.getPort(); // -1 if none specified
-        } catch (Exception ignored) {
-            // If misconfigured, fall back to serverInfo
+        String url = parseProviderUrl(serverInfo);
+        if (StringUtils.isNotBlank(url)) {
+            this.providerUrl = url;
+            this.logInfo("Provider URL set from server info: " + providerUrl);
+        } else {
+            this.logWarning("Failed to parse provider URL from server info, using default URL: " + providerUrl);
         }
-    
-        // If serverInfo doesn't include a port but config did, keep the configured port
-        if (configuredPort != -1 && serverHost != null && !serverHost.contains(":")) {
-            serverHost = serverHost + ":" + configuredPort;
-        }
-    
-        this.providerUrl = serverProtocol + "://" + serverHost;
     }
+
     public void process() {
         try {
             processingStartTime = System.currentTimeMillis();
